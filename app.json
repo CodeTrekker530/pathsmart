@@ -13,6 +13,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "entryPoint": "./node_modules/expo-router/entry",
     "ios": {
       "supportsTablet": true
     },
