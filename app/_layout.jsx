@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+
 import { useEffect, useState } from "react";
 import LandingAnimation from "./screens/landing_animation";
 
@@ -15,4 +16,12 @@ export default function Layout() {
   }
 
   return <Stack />;
+
+
+export default function RootLayout() {
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ title: "Home" }} />
+    </Stack>
+  );
 }
