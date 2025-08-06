@@ -35,11 +35,7 @@ export default function LandingAnimation() {
           duration: 600,
           useNativeDriver: false,
         }),
-      ]).start(() => {
-        setTimeout(() => {
-          router.replace("/screens/home");
-        }, 800);
-      });
+      ]);
     });
   }, []);
 
