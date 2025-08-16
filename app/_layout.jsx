@@ -15,5 +15,5 @@ export default function Layout() {
     return <LandingAnimation onFinish={() => setShowSplash(false)} />;
   }
 
-  return <Stack />;
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
