@@ -1,6 +1,14 @@
 // app/screens/home.jsx
 import React from "react";
-import { View, Text, StyleSheet, TextInput, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Image,
+  TouchableOpacity,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Home() {
   return (
@@ -12,12 +20,17 @@ export default function Home() {
           source={require("./assets/logo.png")} // replace with your logo path
           style={styles.logo}
         />
+        <Text style={styles.logo_name}>PathSmart</Text>
+        <TouchableOpacity style={styles.filterButton}>
+          <Ionicons name="filter-outline" size={22} color="#000" />
+        </TouchableOpacity>
         {/* Search Box */}
         <TextInput
           style={styles.searchBox}
-          placeholder="Search..."
+          placeholder="What are you looking for?"
           placeholderTextColor="#999"
         />
+        <TouchableOpacity style={styles.loginButton}>Login</TouchableOpacity>
       </View>
 
       {/* Main Content */}
@@ -36,7 +49,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#0766AD",
     paddingHorizontal: 10,
     paddingVertical: 12,
     elevation: 3, // shadow for Android
@@ -53,12 +66,13 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     flex: 1,
-    height: 40,
+    height: 42,
     backgroundColor: "#f5f5f5",
-    borderRadius: 20,
+    borderRadius: 10,
     paddingHorizontal: 15,
     fontSize: 16,
-    color: "#333",
+    color: "#000",
+    marginHorizontal: 5,
   },
   mainContent: {
     flex: 1,
@@ -69,5 +83,31 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "600",
     color: "#333",
+  },
+  logo_name: {
+    fontSize: 20,
+    fontWeight: "450",
+    color: "#fff",
+  },
+  loginButton: {
+    padding: 8,
+    height: 42,
+    width: 126,
+    borderRadius: 10,
+    marginLeft: 5,
+    fontSize: 18,
+    backgroundColor: "#fff", // darker shade of header for contrast
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterButton: {
+    padding: 8,
+    height: 42,
+    width: 42,
+    borderRadius: 10,
+    marginLeft: 15,
+    backgroundColor: "#fff", // darker shade of header for contrast
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
