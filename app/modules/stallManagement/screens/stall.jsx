@@ -1,27 +1,24 @@
-import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Image,
-  ScrollView,
-  TextInput,
   TouchableOpacity,
-  Dimensions,
-  Platform,
+  TextInput,
+  Image,
 } from "react-native";
-
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 
-export default function AdminInterface() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [zoom, setZoom] = useState(1);
-  const [activeTab, setActiveTab] = useState("map");
+export default function StallPage() {
   const router = useRouter();
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("settings");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(false);
+
+  // No stalls available in this example
+  const stalls = [];
 
   // Function to handle sidebar hover
   const expandSidebar = () => {
@@ -45,20 +42,13 @@ export default function AdminInterface() {
     router.push("/screens/loginScreen");
   };
 
-  // Function to handle search
   const handleSearch = text => {
-    setSearchQuery(text);
-    // Implement search functionality here
+    setSearchTerm(text);
+    // Add search logic here
   };
 
-  // Function to handle zoom in
-  const handleZoomIn = () => {
-    setZoom(Math.min(zoom + 0.1, 1.5));
-  };
-
-  // Function to handle zoom out
-  const handleZoomOut = () => {
-    setZoom(Math.max(zoom - 0.1, 0.8));
+  const handleChangePage = page => {
+    setCurrentPage(page);
   };
 
   // Render the sidebar menu
@@ -204,53 +194,115 @@ export default function AdminInterface() {
   return (
     <View style={styles.container}>
       {renderSidebar()}
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Map</Text>
-          <Text style={styles.subtitle}>Visual map to monitor stalls</Text>
-        </View>
+      <View style={styles.mainContent}>
+        <Text style={styles.title}>Manage Stalls</Text>
+        <Text style={styles.description}>
+          Admin can manage list of stalls in NCPM in this section
+        </Text>
 
         <View style={styles.searchContainer}>
-          <View style={styles.filterButton}>
-            <Image
-              source={require("../../../assets/filter-menu.png")}
-              style={styles.logoImage}
-            />
-          </View>
-          <View style={styles.searchBox}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search stalls..."
-              value={searchQuery}
-              onChangeText={handleSearch}
-            />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for stall name"
+            value={searchTerm}
+            onChangeText={handleSearch}
+          />
+          <TouchableOpacity style={styles.searchButton}>
             <Image
               source={require("../../../assets/search.png")}
               style={styles.logoImage}
             />
-          </View>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.mapScrollContainer}>
-          <View style={[styles.mapContainer, { transform: [{ scale: zoom }] }]}>
-            <Image
-              source={require("../../../assets/map.png")}
-              style={styles.placeholderMap}
-              resizeMode="contain"
-            />
-            {/*  */}
-          </View>
-        </ScrollView>
+        <Text style={styles.sectionTitle}>Stalls</Text>
 
-        <View style={styles.mapControls}>
-          <TouchableOpacity style={styles.controlButton} onPress={handleZoomIn}>
-            <Ionicons name="add" size={24} color="#4CAF50" />
+        <View style={styles.stallsList}>
+          {stalls.length > 0 ? (
+            stalls.map((stall, index) => (
+              <View key={index} style={styles.stallItem}>
+                <Text>{stall.name}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              {/* Empty state for stalls list */}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.pagination}>
+          <TouchableOpacity
+            style={[
+              styles.pageButton,
+              currentPage === 1 && styles.activePageButton,
+            ]}
+            onPress={() => handleChangePage(1)}
+          >
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 1 && styles.activePageButtonText,
+              ]}
+            >
+              1
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.controlButton}
-            onPress={handleZoomOut}
+            style={[
+              styles.pageButton,
+              currentPage === 2 && styles.activePageButton,
+            ]}
+            onPress={() => handleChangePage(2)}
           >
-            <Ionicons name="remove" size={24} color="#4CAF50" />
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 2 && styles.activePageButtonText,
+              ]}
+            >
+              2
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.pageButton,
+              currentPage === 3 && styles.activePageButton,
+            ]}
+            onPress={() => handleChangePage(3)}
+          >
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 3 && styles.activePageButtonText,
+              ]}
+            >
+              3
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.pageButton,
+              currentPage === 4 && styles.activePageButton,
+            ]}
+            onPress={() => handleChangePage(4)}
+          >
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 4 && styles.activePageButtonText,
+              ]}
+            >
+              4
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={() => {
+              currentPage < 4 && handleChangePage(currentPage + 1);
+            }}
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -259,13 +311,105 @@ export default function AdminInterface() {
 }
 
 const styles = StyleSheet.create({
-  logoUserAccount: {
-    marginBottom: 40,
+  logoImage: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
   },
   container: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: "#f9f9f9",
+    padding: 0,
+    backgroundColor: "#ffffff",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 4,
+    color: "#333",
+  },
+  description: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 32,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    height: 40,
+    marginBottom: 24,
+    width: "60%",
+    alignSelf: "flex-end",
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchIcon: {
+    fontSize: 18,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#333",
+  },
+  stallsList: {
+    flex: 1,
+    marginVertical: 20,
+  },
+  stallItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: 200,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 40,
+    paddingBottom: 20,
+  },
+  pageButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#e0e0e0",
+    marginHorizontal: 4,
+    borderRadius: 4,
+  },
+  activePageButton: {
+    backgroundColor: "#5c9a6c",
+  },
+  pageButtonText: {
+    color: "#333",
+  },
+  activePageButtonText: {
+    color: "#fff",
+  },
+  nextButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginLeft: 8,
+  },
+  nextButtonText: {
+    color: "#333",
+    fontWeight: "500",
   },
   sidebar: {
     width: 60,
@@ -291,11 +435,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  logoImage: {
-    width: 24,
-    height: 24,
-    resizeMode: "contain",
-  },
   menuItem: {
     width: "100%",
     height: 44,
@@ -304,6 +443,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
     paddingHorizontal: 10,
+  },
+  activeMenuItem: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   menuText: {
     color: "white",
@@ -337,131 +479,15 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
   },
-  activeMenuItem: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-  },
   sidebarBottom: {
     position: "absolute",
     bottom: 130,
     width: "100%",
     alignItems: "center",
   },
-  content: {
+  mainContent: {
     flex: 1,
     padding: 24,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
-  },
-  searchContainer: {
-    width: 500,
-    flexDirection: "row",
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
     backgroundColor: "#fff",
-  },
-  searchBox: {
-    flex: 1,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    backgroundColor: "#fff",
-  },
-  searchInput: {
-    flex: 1,
-    height: "100%",
-    fontSize: 16,
-  },
-  searchIcon: {
-    marginLeft: 8,
-  },
-  mapScrollContainer: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#efebe2",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  mapContainer: {
-    width: Dimensions.get("window").width * 0.85,
-    height: Dimensions.get("window").height * 0.6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  placeholderMap: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 8,
-  },
-  mapControls: {
-    position: "absolute",
-    right: 40,
-    top: 180,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  controlButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  legend: {
-    flexDirection: "row",
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 20,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  legendText: {
-    fontSize: 14,
-    color: "#666",
   },
 });
