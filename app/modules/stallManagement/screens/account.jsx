@@ -157,7 +157,7 @@ export default function Account() {
           ]}
           onPress={() => {
             setActiveTab("user-account");
-            router.push("/account");
+            router.push("/modules/stallManagement/screens/account");
           }}
         >
           <Image
