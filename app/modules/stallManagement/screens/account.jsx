@@ -117,7 +117,7 @@ export default function Account() {
             style={styles.submenuItem}
             onPress={() => {
               setActiveTab("quality-guide");
-              router.push("/modules/stallManagement/screens/quality_guide");
+              router.push("/modules/stallManagement/screens/qualityGuide");
             }}
           >
             <Text style={styles.submenuText}>Quality Guide</Text>
