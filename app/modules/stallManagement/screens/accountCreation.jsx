@@ -150,7 +150,7 @@ export default function AccountCreation() {
         ]}
         onPress={() => {
           setActiveTab("settings");
-          router.push("/modules/stallManagement/screens/stalls");
+          router.push("/modules/stallManagement/screens/stall");
         }}
       >
         <Image
