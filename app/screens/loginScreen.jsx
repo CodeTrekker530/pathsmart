@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   const handleLogin = () => {
     // console.log("Login attempted with:", { userType, username, password });
-    router.push("/admin_interface");
+    router.push("/modules/stallManagement/screens/adminInterface");
   };
 
   const dismissKeyboard = () => {
