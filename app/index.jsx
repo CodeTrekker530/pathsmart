@@ -1,5 +1,4 @@
 // app/screens/home.jsx
-import React from "react";
 import {
   View,
   Text,
@@ -9,8 +8,11 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 export default function Home() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       {/* Top HUD */}
@@ -30,7 +32,12 @@ export default function Home() {
           placeholder="What are you looking for?"
           placeholderTextColor="#999"
         />
-        <TouchableOpacity style={styles.loginButton}>Login</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => router.push("/screens/loginScreen")}
+        >
+          Login
+        </TouchableOpacity>
       </View>
 
       {/* Main Content */}
