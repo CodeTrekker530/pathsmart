@@ -80,7 +80,7 @@ export default function AdminInterface() {
         style={[styles.menuItem, activeTab === "map" && styles.activeMenuItem]}
         onPress={() => {
           setActiveTab("map");
-          router.push("/admin_interface");
+          router.push("/modules/stallManagement/screens/adminInterface");
         }}
       >
         <Image
@@ -96,7 +96,7 @@ export default function AdminInterface() {
         ]}
         onPress={() => {
           setActiveTab("users");
-          router.push("/account_creation");
+          router.push("/modules/stallManagement/screens/accountCreation");
         }}
       >
         <Image
@@ -141,7 +141,7 @@ export default function AdminInterface() {
             style={styles.submenuItem}
             onPress={() => {
               setActiveTab("quality-guide");
-              router.push("/quality_guide");
+              router.push("/modules/stallManagement/screens/qualityGuide");
             }}
           >
             <Text style={styles.submenuText}>Quality Guide</Text>
@@ -150,7 +150,7 @@ export default function AdminInterface() {
             style={styles.submenuItem}
             onPress={() => {
               setActiveTab("listing");
-              router.push("/listing");
+              router.push("/modules/stallManagement/screens/listing");
             }}
           >
             <Text style={styles.submenuText}>Listing Creation</Text>
@@ -164,7 +164,7 @@ export default function AdminInterface() {
         ]}
         onPress={() => {
           setActiveTab("settings");
-          router.push("/stalls");
+          router.push("/modules/stallManagement/screens/stalls");
         }}
       >
         <Image
@@ -181,7 +181,7 @@ export default function AdminInterface() {
           ]}
           onPress={() => {
             setActiveTab("user-account");
-            router.push("/account");
+            router.push("/modules/stallManagement/screens/account");
           }}
         >
           <Image
