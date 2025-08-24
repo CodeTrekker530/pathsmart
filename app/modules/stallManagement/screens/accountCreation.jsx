@@ -37,7 +37,7 @@ export default function AccountCreation() {
   // Function to handle logout
   const handleLogout = () => {
     // Navigate back to the login page
-    router.push("/");
+    router.push("/screens/loginScreen");
   };
 
   const handleCreateAccount = () => {
