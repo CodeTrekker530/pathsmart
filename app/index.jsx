@@ -5,18 +5,20 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   Image,
   TouchableOpacity,
   ScrollView,
   useWindowDimensions,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import SearchBar from "./components/searchBar";
+import { useRouter } from "expo-router"; // ⬅️ import router
+
 
 export default function Home() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 768; // responsive breakpoint
+  const router = useRouter();
 
   return (
     <LinearGradient
@@ -39,26 +41,11 @@ export default function Home() {
         />
         <Text style={styles.logo_name}>PathSmart</Text>
 
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="filter-outline" size={22} color="#000" />
-        </TouchableOpacity>
+      <SearchBar />  {/* reused here */}
 
-        {/* Search Box with Icon */}
-        <View style={styles.searchWrapper}>
-          <TextInput
-            style={styles.searchBox}
-            placeholder="What are you looking for?"
-            placeholderTextColor="#999"
-          />
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color="#666"
-            style={styles.searchIcon}
-          />
-        </View>
 
-        <TouchableOpacity style={styles.loginButton}>
+        <TouchableOpacity style={styles.loginButton}
+          onPress={() => { router.push("/screens/loginScreen"); }}>
           <Text style={{ fontWeight: "600", color: "#0766AD" }}>Login</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -132,25 +119,6 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
     marginRight: 10,
   },
-  searchWrapper: {
-    flex: 1,
-    position: "relative",
-    marginHorizontal: 5,
-  },
-  searchBox: {
-    height: 42,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    color: "#000",
-  },
-  searchIcon: {
-    position: "absolute",
-    right: 12,
-    top: "50%",
-    transform: [{ translateY: -10 }],
-  },
   mainContent: {
     flexGrow: 1,
     paddingVertical: 20,
@@ -160,24 +128,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "450",
     color: "#fff",
+    marginRight: 10,
   },
   loginButton: {
     padding: 8,
     height: 42,
     width: 126,
     borderRadius: 10,
-    marginLeft: 5,
-    fontSize: 18,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  filterButton: {
-    padding: 8,
-    height: 42,
-    width: 42,
-    borderRadius: 10,
     marginLeft: 10,
+    fontSize: 18,
     backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",

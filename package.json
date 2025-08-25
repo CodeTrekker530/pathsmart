@@ -10,28 +10,30 @@
     "lint": "expo lint"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.4",
+    "@react-navigation/native": "^7.1.17",
+    "@react-navigation/stack": "^7.4.7",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
     "expo": "~53.0.20",
+    "expo-constants": "~17.1.7",
+    "expo-linear-gradient": "~14.1.5",
+    "expo-linking": "~7.1.7",
+    "expo-router": "~5.1.4",
     "expo-status-bar": "~2.2.3",
     "prettier": "^3.6.2",
     "react": "19.0.0",
-    "react-native": "0.79.5",
     "react-dom": "19.0.0",
-    "react-native-web": "^0.20.0",
-    "@expo/metro-runtime": "~5.0.4",
-    "expo-router": "~5.1.4",
+    "react-native": "0.79.5",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
-    "expo-linking": "~7.1.7",
-    "expo-constants": "~17.1.7",
-    "expo-linear-gradient": "~14.1.5"
+    "react-native-web": "^0.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@types/react": "~19.0.10",
     "eslint": "^9.0.0",
-    "eslint-config-expo": "~9.2.0",
-    "@types/react": "~19.0.10"
+    "eslint-config-expo": "~9.2.0"
   },
   "private": true
 }
