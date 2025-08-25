@@ -66,6 +66,21 @@ export default function Home() {
             </View>
         </View>
         <View style={{ height: 1, backgroundColor: "#ccc", marginVertical: 10 }} />
+
+        {/* Results Placeholder */}
+        <TouchableOpacity
+  style={styles.resultCard}
+  onPress={() => router.push("/pathfinder")}
+>
+  <Image
+    source={{ uri: "https://images.unsplash.com/photo-1574226516831-e1dff420e8e9?auto=format&fit=crop&w=200&q=80" }}
+    style={styles.resultImage}
+  />
+  <View style={styles.resultInfo}>
+    <Text style={styles.resultTitle}>Banana</Text>
+    <Text style={styles.resultLocation}>Ground Floor, 3rd Floor</Text>
+  </View>
+</TouchableOpacity>
     </ScrollView>
     </>
 
@@ -95,6 +110,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingVertical: 20,
     paddingHorizontal: 20,
+    marginHorizontal: 150, // Add margin to the whole content except the top HUD
   },
   logo_name: {
     fontSize: 20,
@@ -116,13 +132,12 @@ const styles = StyleSheet.create({
     heroTitle: {
     fontSize: 18,
     fontWeight: "400",
-    marginBottom: 10,
   },
   resultsHeaderRow: {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "space-between",
-  marginBottom: 10,
+  marginTop: 20,
   },
   filterTabs: {
   flexDirection: "row",
@@ -131,11 +146,10 @@ const styles = StyleSheet.create({
 tabButton: {
   paddingHorizontal: 14,
   paddingVertical: 8,
-  borderRadius: 20, // makes it pill/radial
-  backgroundColor: "#e6f0fa",
+  borderRadius: 10, // makes it pill/radial
+  backgroundColor: "#fff",
   marginLeft: 8,
   borderWidth: 1,
-  borderColor: "#0766AD",
   minWidth: 60,
   alignItems: "center",
   justifyContent: "center",
@@ -143,5 +157,39 @@ tabButton: {
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.08,
   shadowRadius: 2,
+},
+resultCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  padding: 12,
+  marginVertical: 10,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.07,
+  shadowRadius: 4,
+  elevation: 2,
+},
+resultImage: {
+  width: 70,
+  height: 50,
+  borderRadius: 8,
+  marginRight: 14,
+  resizeMode: "cover",
+},
+resultInfo: {
+  flex: 1,
+  justifyContent: "center",
+},
+resultTitle: {
+  fontSize: 17,
+  fontWeight: "700",
+  marginBottom: 2,
+  color: "#222",
+},
+resultLocation: {
+  fontSize: 14,
+  color: "#444",
 },
 });
