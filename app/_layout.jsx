@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { SelectionProvider } from "./context/SelectionContext"; // adjust path as needed
 
 import { useEffect, useState } from "react";
 import LandingAnimation from "./screens/landing_animation";
@@ -15,5 +16,9 @@ export default function Layout() {
     return <LandingAnimation onFinish={() => setShowSplash(false)} />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <SelectionProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </SelectionProvider>
+  );
 }
