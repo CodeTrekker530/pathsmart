@@ -12,7 +12,7 @@ export default StyleSheet.create({
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 10,
+    marginLeft: 10, // or adjust as needed
   },
   searchContainer: {
     flexDirection: 'row',
@@ -21,6 +21,7 @@ export default StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     alignItems: 'center',
+    marginTop: 20,
   },
   searchIcon: {
     marginRight: 6,
@@ -120,6 +121,10 @@ export default StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8, // optional, for spacing between icon and text
   },
 });
