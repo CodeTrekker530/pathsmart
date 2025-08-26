@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, FlatList } from 'react-native';
 import styles from './assets/Styles/SearchStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -15,7 +15,6 @@ export default function SearchScreen() {
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
   const { setSelectedItem } = useSelection();
 
 
@@ -26,16 +25,13 @@ export default function SearchScreen() {
   };
 
   const loadData = async (searchTerm = '') => {
-    setLoading(true);
-    const results = await fetchProductAndServices(searchTerm);
-    setData(results);
-    setLoading(false);
-  };
-
-  // Load once on mount
-  useEffect(() => {
-    loadData();
-  }, []);
+      const results = await fetchProductAndServices(searchTerm);
+      setData(results);
+    };
+    // Load once on mount
+    useEffect(() => {
+      loadData();
+    }, []);
 
   useEffect(() => {
     clearTimeout(debounceTimer);
