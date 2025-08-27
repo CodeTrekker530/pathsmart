@@ -4,7 +4,7 @@ import { Modal, View, TouchableOpacity, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-export default function ToolsDropdown({ visible, onClose }) {
+export default function ToolsDropdown({ visible, onClose, dropdownStyle }) {
   const router = useRouter();
 
   return (
@@ -15,7 +15,7 @@ export default function ToolsDropdown({ visible, onClose }) {
       onRequestClose={onClose}
     >
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <View style={styles.dropdown}>
+        <View style={[styles.dropdown, dropdownStyle]}>
           <TouchableOpacity
             style={styles.itemRow}
             onPress={() => { router.push("/ShoppingList"); onClose(); }}

@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { fetchProductAndServices } from '../backend/server';
 import { useSelection } from './context/SelectionContext'; 
 import { LinearGradient } from 'expo-linear-gradient';
+import ToolsDropdown from './components/ToolsDropdown'; // adjust path if needed
 
 let debounceTimer;
 
@@ -16,7 +17,7 @@ export default function SearchScreen() {
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [data, setData] = useState([]);
   const { setSelectedItem } = useSelection();
-
+  const [toolsDropdownVisible, setToolsDropdownVisible] = useState(false);
 
   const filters = ['All', 'Products', 'Stores', 'Services'];
 
@@ -143,6 +144,41 @@ export default function SearchScreen() {
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       </View>
+      {/* Floating Tools Button */}
+      <View style={{
+        position: "absolute",
+        bottom: 30,
+        right: 30,
+        zIndex: 1000,
+      }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: 30,
+            width: 56,
+            height: 56,
+            justifyContent: "center",
+            alignItems: "center",
+            elevation: 6,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+          }}
+          onPress={() => setToolsDropdownVisible(true)}
+        >
+          <Ionicons name="construct-outline" size={28} color="#0766AD" />
+        </TouchableOpacity>
+      </View>
+      <ToolsDropdown
+        visible={toolsDropdownVisible}
+        onClose={() => setToolsDropdownVisible(false)}
+        dropdownStyle={{
+          position: "absolute",
+          bottom: 100, // adjust as needed (should be > button height + margin)
+          right: 30,
+        }}
+      />
     </View>
   );
 }
