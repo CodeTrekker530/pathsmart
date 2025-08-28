@@ -81,7 +81,8 @@ export default function Home() {
                   Tutorial
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.bigButton}>
+              <TouchableOpacity style={styles.bigButton}
+              onPress={() => { router.push("/ShoppingList"); }}>
                 <Text style={styles.bigButtonText}>Create Shopping List</Text>
               </TouchableOpacity>
             </View>

@@ -1,0 +1,40 @@
+<svg width="248" height="336" viewBox="0 0 248 336" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 2">
+<path id="background" d="M0 0H248V336H29.6651L0 0Z" fill="white"/>
+<g id="Group 1">
+<path id="1" d="M33 63H66V84H37.215L33 63Z" fill="#D9D9D9"/>
+<path id="2" d="M37.5 86H66V107H41L37.5 86Z" fill="#D9D9D9"/>
+<path id="3" d="M43 117H66V137H45.6655L43 117Z" fill="#D9D9D9"/>
+<path id="4" d="M46 139H66V161H49L46 139Z" fill="#D9D9D9"/>
+<rect id="6" x="69" y="63" width="21" height="21" fill="#D9D9D9"/>
+<rect id="7" x="69" y="86" width="21" height="21" fill="#D9D9D9"/>
+<rect id="10" x="102" y="86" width="21" height="21" fill="#D9D9D9"/>
+<rect id="13" x="132" y="117" width="27" height="21" fill="#D9D9D9"/>
+<rect id="11" x="103" y="117" width="27" height="21" fill="#D9D9D9"/>
+<path id="5" d="M49.5 163H90V183H52L49.5 163Z" fill="#D9D9D9"/>
+<rect id="16" x="171" y="86" width="21" height="21" fill="#D9D9D9"/>
+<rect id="21" x="194" y="86" width="21" height="21" fill="#D9D9D9"/>
+<rect id="17" x="171" y="117" width="44" height="21" fill="#D9D9D9"/>
+<rect id="22" x="194" y="140" width="21" height="21" fill="#D9D9D9"/>
+<rect id="18" x="171" y="140" width="21" height="21" fill="#D9D9D9"/>
+<rect id="19" x="171" y="162" width="21" height="21" fill="#D9D9D9"/>
+<rect id="23" x="194" y="162" width="21" height="21" fill="#D9D9D9"/>
+<rect id="12" x="125" y="86" width="44" height="21" fill="#D9D9D9"/>
+<rect id="14" x="148" y="63" width="21" height="21" fill="#D9D9D9"/>
+<rect id="15" x="171" y="63" width="21" height="21" fill="#D9D9D9"/>
+<rect id="20" x="194" y="63" width="21" height="21" fill="#D9D9D9"/>
+<rect id="9" x="102" y="63" width="44" height="21" fill="#D9D9D9"/>
+<rect id="8" x="69" y="117" width="21" height="44" fill="#D9D9D9"/>
+<g id="stair">
+<rect id="Rectangle 19" x="112" y="152" width="38" height="31" fill="#D9D9D9"/>
+<rect id="Rectangle 20" x="116.222" y="158.341" width="29.5556" height="24.6591" fill="white"/>
+</g>
+<g id="border">
+<line id="Line 1" x1="17.493" y1="52.9167" x2="42.493" y2="200.917" stroke="black"/>
+<line id="Line 2" x1="17" y1="52.5" x2="226" y2="52.5" stroke="black"/>
+<line id="Line 3" x1="225.5" y1="201" x2="225.5" y2="53" stroke="black"/>
+<line id="Line 4" x1="226" y1="201.5" x2="42" y2="201.5" stroke="black"/>
+</g>
+</g>
+</g>
+</svg>
