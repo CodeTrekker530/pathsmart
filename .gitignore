@@ -37,3 +37,4 @@ yarn-error.*
 *.tsbuildinfo
 
 backend/supabaseClient.js
+backend/.env
