@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const window = Dimensions.get('window');
@@ -10,8 +12,6 @@ export default StyleSheet.create({
     flex: 1,
     top: isWeb ? 0 : 49,
     alignItems: 'center',
-    marginLeft: 300 ,
-    marginRight: 300,
     backgroundColor: '#fff'
 
   },
@@ -61,11 +61,6 @@ export default StyleSheet.create({
     borderColor: '#fff',
     borderWidth: 1,
     flex: 1,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    marginRight: 5,
   },
   searchInput: {
     flex: 1,
@@ -120,5 +115,39 @@ export default StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
+  },
+    header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+    logo: {
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
+    marginRight: 10,
+  },
+    logo_name: {
+    fontSize: 20,
+    fontWeight: "450",
+    color: "#fff",
+    marginRight: 10,
+  },
+    loginButton: {
+    padding: 8,
+    height: 42,
+    width: 126,
+    borderRadius: 10,
+    marginLeft: 10,
+    fontSize: 18,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

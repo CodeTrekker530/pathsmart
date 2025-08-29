@@ -130,7 +130,7 @@ export default function SearchScreen() {
                 console.log('Tapped item:', item);
                 console.log('Node IDs:', item.node_id);
                 setSelectedItem(item);
-                router.push('/map'); 
+                router.push('/pathfinder'); 
               }}
             >
               <Image source={imageMap[item.image]} style={styles.itemImage} />
