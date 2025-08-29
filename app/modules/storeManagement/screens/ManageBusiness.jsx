@@ -11,7 +11,7 @@ export default function ManageBusiness() {
   };
 
   const handleAddListing = () => {
-    router.push('/AddListings');
+    router.push('/modules/storeManagement/screens/AddListings');
   };
 
   const handleViewListings = () => {
@@ -23,9 +23,11 @@ export default function ManageBusiness() {
       {/* Sidebar */}
       <View style={styles.sidebar}>
         <View style={styles.sidebarIcons}>
-          <Image source={require('../../../assets/icon.png')} style={styles.sidebarIcon} />
-          <Image source={require('../../../assets/home.png')} style={styles.sidebarIcon} />
-          <Image source={require('../../../assets/logout.png')} style={styles.sidebarIcon} />
+          <Image source={require('../../../assets/logo.png')} style={[styles.sidebarIcon, {tintColor: undefined}]} />
+          <Image source={require('../../../assets/user-account.png')} style={styles.sidebarIcon} />
+          <TouchableOpacity onPress={() => router.replace('/screens/loginScreen')}>
+            <Image source={require('../../../assets/logout.png')} style={styles.sidebarIcon} />
+          </TouchableOpacity>
         </View>
       </View>
       {/* Main Content */}
@@ -55,7 +57,7 @@ export default function ManageBusiness() {
                   <Text style={styles.addListingLink}>Add your listings</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.viewListingsButton} onPress={handleViewListings}>
+              <TouchableOpacity style={styles.viewListingsButton} onPress={() => router.push('/modules/storeManagement/screens/ViewListings')}>
                 <Feather name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.viewListingsButtonText}>View Listings</Text>
               </TouchableOpacity>
@@ -89,10 +91,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sidebarIcon: {
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     marginVertical: 24,
-    tintColor: '#fff',
   },
   main: {
     flex: 1,
@@ -116,13 +117,13 @@ const styles = StyleSheet.create({
   },
   centerContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    width: 370,
+    width: 300,
     elevation: 2,
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -130,12 +131,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     overflow: 'hidden',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 12,
   },
   cardImage: {
     width: '100%',
-    height: 160,
+    height: 120,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     marginBottom: 0,
@@ -143,9 +144,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardContent: {
-    paddingHorizontal: 24,
-    paddingTop: 18,
-    paddingBottom: 18,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     width: '100%',
   },
   cardTextRow: {
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#6BA06B',
     borderRadius: 8,
-    paddingVertical: 16,
+    paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 0,
