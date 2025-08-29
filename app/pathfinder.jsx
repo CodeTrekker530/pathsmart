@@ -1,24 +1,122 @@
 /* eslint-disable prettier/prettier */
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useRef } from 'react';
+import {
+  ScrollView,
+  Image,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  Dimensions,
+  Animated,
+  PanResponder,
+} from 'react-native';
+import styles from './assets/Styles/Maps';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import MapSVG from './utils/MapSVG';
+import { useSelection } from './context/SelectionContext'; 
+import SearchBar from "./components/searchBar";
+import { LinearGradient } from "expo-linear-gradient";
+const window = Dimensions.get('window');
+const drawerHeight = window.height * 0.6;
 
-export default function Pathfinder() {
+export default function HomeScreen() {
+const { selectedItem } = useSelection();
+console.log('[Map.js] selectedItem:', selectedItem);
+const router = useRouter();
+const initialDrawerOffset = window.height - 150;
+const panY = useRef(new Animated.Value(initialDrawerOffset)).current;
+
+const resetPositionAnim = Animated.timing(panY, {
+  toValue: window.height - drawerHeight,
+  duration: 300,
+  useNativeDriver: false,
+});
+
+const closeAnim = Animated.timing(panY, {
+  toValue: initialDrawerOffset,
+  duration: 300,
+  useNativeDriver: false,
+});
+
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gestureState) => {
+        const newY = gestureState.dy + window.height - drawerHeight;
+        if (newY > window.height - drawerHeight && newY < window.height) {
+          panY.setValue(newY);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100) {
+          closeAnim.start();
+        } else {
+          resetPositionAnim.start();
+        }
+      },
+    })
+  ).current;
+
   return (
+    <View 
+    >
+      {/* Top HUD (stays at top, same gradient) */}
+      <LinearGradient
+        colors={["#0766AD", "#BCE2BD"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.header}
+      >
+        {/* Logo */}
+        <Image
+          source={require("./assets/logo.png")} // replace with your logo path
+          style={styles.logo}
+        />
+        <Text style={styles.logo_name}>PathSmart</Text>
+
+      <SearchBar />  {/* reused here */}
+
+
+        <TouchableOpacity style={styles.loginButton}
+          onPress={() => { router.push("/screens/loginScreen"); }}>
+          <Text style={{ fontWeight: "600", color: "#0766AD" }}>Login</Text>
+        </TouchableOpacity>
+      </LinearGradient>
     <View style={styles.container}>
-      <Text style={styles.text}>Pathfinder Page</Text>
+
+      {/* Floating vertical button group */}
+      <View style={styles.floatingButtons}>
+        <TouchableOpacity style={styles.floatingButton}>
+          <Text style={styles.buttonNumber}>1</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.floatingButton}>
+          <Text style={styles.buttonNumber}>2</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.floatingButton}>
+          <Text style={styles.buttonNumber}>3</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Zoomable, scrollable image */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ flexGrow: 1 }}
+        maximumZoomScale={4}
+        minimumZoomScale={1}
+        bounces={false}
+        pinchGestureEnabled={true}
+        horizontal
+        showsVerticalScrollIndicator={false}
+        >
+        <View style={styles.mapContainer}>
+          <MapSVG width={window.width * 3} height={window.height * 3} />
+        </View>
+      </ScrollView>
     </View>
+  </View>
+
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  text: {
-    fontSize: 22,
-    color: "#222",
-  },
-});
