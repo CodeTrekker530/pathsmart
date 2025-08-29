@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   pageHeader: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
     marginBottom: 18,
     color: "#222",
     textAlign: "Left",
-    marginTop: 20,
+    marginTop: 15,
   },
   row: {
     flex: 1,
@@ -337,5 +337,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8, // optional, for spacing between icon and text
+    marginTop: 20,
   },
 });
