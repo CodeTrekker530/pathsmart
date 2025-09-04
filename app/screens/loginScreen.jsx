@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [usernameFocused, setUsernameFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const router = useRouter();
 
   const handleLogin = () => {
@@ -25,139 +27,145 @@ export default function LoginPage() {
     router.push("/modules/stallManagement/screens/adminInterface");
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-    setShowDropdown(false);
-  };
-
   return (
-    <TouchableWithoutFeedback onPress={dismissKeyboard}>
-      <View style={styles.container}>
-        <View style={styles.loginContainer}>
-          {/* Logo and Title */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logoBox}>
-              <Image
-                style={styles.logo}
-                source={require("../assets/logo.png")}
-              />
-            </View>
-            <Text style={styles.logoName}>PathSmart</Text>
+    <View style={styles.container}>
+      <View style={styles.loginContainer}>
+        {/* Logo and Title */}
+        <View style={styles.logoContainer}>
+          <View style={styles.logoBox}>
+            <Image style={styles.logo} source={require("../assets/logo.png")} />
           </View>
-
-          {/* Login Form */}
-          <View style={styles.formContainer}>
-            <Text style={styles.systemTitle}>PathSmart System</Text>
-            <Text style={styles.loginInstructions}>
-              Enter your username and password to continue. Please log in as
-              either an Administrator or a Stall Owner.
-            </Text>
-
-            {/* Login Type Selector */}
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity
-                style={styles.dropdown}
-                onPress={() => setShowDropdown(!showDropdown)}
-              >
-                <Text style={styles.dropdownText}>
-                  {userType ? userType : "Login as"}
-                </Text>
-                <Image
-                  source={require("../assets/dropdown-arrow.png")}
-                  style={styles.iconSmall}
-                />
-              </TouchableOpacity>
-
-              {showDropdown && (
-                <View style={styles.dropdownMenu}>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setUserType("Administrator");
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <Text>Administrator</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setUserType("Stall Owner");
-                      setShowDropdown(false);
-                    }}
-                  >
-                    <Text>Stall Owner</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            {/* Username Input */}
-            <View style={styles.inputContainer}>
-              <Image
-                source={require("../assets/user-icon.png")}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Image
-                source={require("../assets/lock-icon.png")}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Image
-                  source={
-                    showPassword
-                      ? require("../assets/eye-icon.png")
-                      : require("../assets/eye-off-icon.png")
-                  }
-                  style={styles.iconSmall}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Forgot Password */}
-            <TouchableOpacity style={styles.forgotPasswordContainer}>
-              <Text style={styles.forgotPasswordText}>
-                Forgot your password?
-              </Text>
-            </TouchableOpacity>
-
-            {/* Login Button */}
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.logoName}>PathSmart</Text>
         </View>
 
-        <View style={styles.backgroundImagePlaceholder}>
-          <Image
-            source={require("../assets/login-bg.png")}
-            style={styles.backgroundImage}
-          />
-          <View style={styles.overlay} />
+        {/* Login Form */}
+        <View style={styles.formContainer}>
+          <Text style={styles.systemTitle}>PathSmart System</Text>
+          <Text style={styles.loginInstructions}>
+            Enter your username and password to continue. Please log in as
+            either an MEPO employee or a Stall Owner.
+          </Text>
+
+          {/* Login Type Selector */}
+          <View style={styles.dropdownContainer}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowDropdown(!showDropdown)}
+            >
+              <Text style={styles.dropdownText}>
+                {userType ? userType : "Login as"}
+              </Text>
+              <Image
+                source={require("../assets/dropdown-arrow.png")}
+                style={styles.iconSmall}
+              />
+            </TouchableOpacity>
+
+            {showDropdown && (
+              <View style={styles.dropdownMenu}>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setUserType("MEPO employee");
+                    setShowDropdown(false);
+                  }}
+                >
+                  <Text>MEPO employee</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setUserType("Stall Owner");
+                    setShowDropdown(false);
+                  }}
+                >
+                  <Text>Stall Owner</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Username Input */}
+          <View
+            style={[
+              styles.inputContainer,
+              usernameFocused && styles.inputContainerFocused,
+            ]}
+          >
+            <Image
+              source={require("../assets/user-icon.png")}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              value={username}
+              onChangeText={setUsername}
+              onFocus={() => setUsernameFocused(true)}
+              onBlur={() => setUsernameFocused(false)}
+            />
+          </View>
+
+          {/* Password Input */}
+          <View
+            style={[
+              styles.inputContainer,
+              passwordFocused && styles.inputContainerFocused,
+            ]}
+          >
+            <Image
+              source={require("../assets/lock-icon.png")}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Image
+                source={
+                  showPassword
+                    ? require("../assets/eye-icon.png")
+                    : require("../assets/eye-off-icon.png")
+                }
+                style={styles.iconSmall}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Forgot Password */}
+          <TouchableOpacity style={styles.forgotPasswordContainer}>
+            <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+          </TouchableOpacity>
+
+          {/* Login Button */}
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <Text style={styles.loginButtonText}>Login</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </TouchableWithoutFeedback>
+
+      <View style={styles.backgroundImagePlaceholder}>
+        <Image
+          source={require("../assets/login-bg.png")}
+          style={styles.backgroundImage}
+        />
+        <View style={styles.overlay} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  inputContainerFocused: {
+    borderWidth: 2,
+    boxSizing: "border-box",
+  },
   container: {
     flex: 1,
     flexDirection: "row",
@@ -268,6 +276,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    outlineWidth: 0,
   },
   forgotPasswordContainer: {
     alignSelf: "flex-start",
