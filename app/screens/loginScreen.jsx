@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 export default function LoginPage() {
-  const [userType, setUserType] = useState("Admin");
+  const [userType, setUserType] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   const handleLogin = () => {
     // console.log("Login attempted with:", { userType, username, password });
-    router.push("/modules/storeManagement/screens/dashboard");
+    router.push("/modules/stallManagement/screens/adminInterface");
   };
 
   const dismissKeyboard = () => {
@@ -59,7 +59,9 @@ export default function LoginPage() {
                 style={styles.dropdown}
                 onPress={() => setShowDropdown(!showDropdown)}
               >
-                <Text style={styles.dropdownText}>Login as</Text>
+                <Text style={styles.dropdownText}>
+                  {userType ? userType : "Login as"}
+                </Text>
                 <Image
                   source={require("../assets/dropdown-arrow.png")}
                   style={styles.iconSmall}
@@ -71,7 +73,7 @@ export default function LoginPage() {
                   <TouchableOpacity
                     style={styles.dropdownItem}
                     onPress={() => {
-                      setUserType("Admin");
+                      setUserType("Administrator");
                       setShowDropdown(false);
                     }}
                   >
@@ -80,7 +82,7 @@ export default function LoginPage() {
                   <TouchableOpacity
                     style={styles.dropdownItem}
                     onPress={() => {
-                      setUserType("StallOwner");
+                      setUserType("Stall Owner");
                       setShowDropdown(false);
                     }}
                   >
