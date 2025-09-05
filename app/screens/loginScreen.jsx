@@ -163,8 +163,9 @@ export default function LoginPage() {
 
 const styles = StyleSheet.create({
   inputContainerFocused: {
-    borderWidth: 2,
+    borderWidth: 1,
     boxSizing: "border-box",
+    borderColor: "#000",
   },
   container: {
     flex: 1,
