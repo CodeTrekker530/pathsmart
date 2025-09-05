@@ -6,54 +6,88 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
+import { supabase } from "../../../../backend/supabaseClient";
+import AddListingModal from "../components/addListingModal";
 
 export default function ListingPage() {
-  const router = useRouter(); // Keep router for future navigation
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("listing");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [showProductSubmenu, setShowProductSubmenu] = useState(true); // Start with submenu open since we're in Product/Services
+  const [showProductSubmenu, setShowProductSubmenu] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [pns, setPns] = useState([]);
 
-  // No products available in this example
-  const products = [];
+  const filteredProducts = pns.filter(item =>
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Function to handle sidebar hover
+  const [form, setForm] = useState({
+    image: "",
+    name: "",
+    bicol_name: "",
+    tagalog_name: "",
+    category: "",
+  });
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from("ProductandServices")
+      .select("*");
+    if (!error && data) {
+      setPns(data);
+    }
+  };
+
   const expandSidebar = () => {
     setSidebarExpanded(true);
   };
-
-  // Function to collapse sidebar
   const collapseSidebar = () => {
     setSidebarExpanded(false);
     setShowProductSubmenu(false);
   };
-
-  // Function to toggle product submenu
   const toggleProductSubmenu = () => {
     setShowProductSubmenu(!showProductSubmenu);
   };
-
-  // Function to handle logout
   const handleLogout = () => {
-    // Navigate back to the login page
     router.push("/screens/loginScreen");
   };
-
   const handleAddProduct = () => {
-    console.log("Adding new product or service");
-    // Add logic to create new product
+    setShowAddModal(true);
   };
-
   const handleSearch = text => {
     setSearchTerm(text);
-    // Add search logic here
   };
-
   const handleChangePage = page => {
     setCurrentPage(page);
+  };
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setForm({
+      image: "",
+      name: "",
+      bicol_name: "",
+      tagalog_name: "",
+      category: "",
+    });
+  };
+  const handleSubmitModal = () => {
+    // Add logic to submit new product (e.g., call Supabase)
+    setShowAddModal(false);
+    setForm({
+      image: "",
+      name: "",
+      bicol_name: "",
+      tagalog_name: "",
+      category: "",
+    });
   };
 
   // Render the sidebar menu
@@ -209,7 +243,6 @@ export default function ListingPage() {
         <View style={styles.contentSection}>
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>Products</Text>
-
             <View style={styles.searchSection}>
               <TextInput
                 style={styles.searchInput}
@@ -225,28 +258,73 @@ export default function ListingPage() {
               </TouchableOpacity>
             </View>
           </View>
-
           <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
             <Text style={styles.addButtonIcon}>+</Text>
             <Text style={styles.addButtonText}>Add new product or service</Text>
           </TouchableOpacity>
+          {showAddModal && (
+            <AddListingModal
+              onClose={handleCloseModal}
+              onSubmit={handleSubmitModal}
+              form={form}
+              setForm={setForm}
+            />
+          )}
 
-          <View style={styles.productsList}>
-            {products.length > 0 ? (
-              products.map((product, index) => (
-                <View key={index} style={styles.productItem}>
-                  <Text>{product.name}</Text>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  No product/service available
+          <View style={styles.tableContainer}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderCell}>Image</Text>
+              <Text style={styles.tableHeaderCell}>Product Name</Text>
+              <Text style={styles.tableHeaderCell}>Category</Text>
+              <Text style={styles.tableHeaderCell}>Actions</Text>
+            </View>
+            {filteredProducts.length === 0 ? (
+              <View style={{ alignItems: "center", marginTop: 100 }}>
+                <Text style={{ color: "#999", fontSize: 16 }}>
+                  No results found.
                 </Text>
               </View>
+            ) : (
+              filteredProducts.map((item, idx) => (
+                <View style={styles.tableRow} key={item.id || idx}>
+                  <View style={styles.tableCell}>
+                    <Image
+                      source={
+                        item.pns_image && item.pns_image.trim() !== ""
+                          ? { uri: item.pns_image }
+                          : require("../../../assets/image.png")
+                      }
+                      style={styles.productImage}
+                    />
+                  </View>
+                  <View style={styles.tableCell}>
+                    <Text style={styles.productName}>{item.name}</Text>
+                  </View>
+                  <View style={styles.tableCell}>
+                    <Text style={styles.productCategory}>
+                      {item.pns_category}
+                    </Text>
+                  </View>
+                  <View style={[styles.tableCell, styles.actionsCell]}>
+                    <TouchableOpacity style={styles.editButton}>
+                      <Image
+                        source={require("../../../assets/edit-icon.svg")}
+                        style={styles.actionIcon}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.deleteButton}>
+                      <Image
+                        source={require("../../../assets/delete-icon.svg")}
+                        style={styles.actionIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
             )}
           </View>
 
+          {/* pagination */}
           <View style={styles.pagination}>
             <TouchableOpacity
               style={[
@@ -328,6 +406,74 @@ export default function ListingPage() {
 }
 
 const styles = StyleSheet.create({
+  tableContainer: {
+    marginTop: 20,
+    width: "100%",
+  },
+  tableHeaderRow: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  tableHeaderCell: {
+    flex: 1,
+    fontWeight: "500",
+    fontSize: 16,
+    color: "#333",
+  },
+  tableRow: {
+    flexDirection: "row",
+    width: "100%",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+    marginBottom: 12,
+  },
+  tableCell: {
+    flex: 1,
+  },
+  productImage: {
+    width: 60,
+    height: 40,
+    borderRadius: 6,
+    resizeMode: "cover",
+  },
+  productName: {
+    fontSize: 15,
+    color: "#222",
+    fontWeight: "500",
+  },
+  productCategory: {
+    fontSize: 14,
+    color: "#444",
+  },
+  actionsCell: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  editButton: {
+    backgroundColor: "#5c9a6c",
+    padding: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  deleteButton: {
+    backgroundColor: "#e57373",
+    padding: 8,
+    borderRadius: 4,
+  },
+  actionIcon: {
+    width: 18,
+    height: 18,
+    tintColor: "#fff",
+  },
   container: {
     flex: 1,
     flexDirection: "row",
@@ -418,8 +564,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 40,
-    paddingBottom: 20,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingVertical: 20,
+    backgroundColor: "#fff",
+    zIndex: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
   },
   pageButton: {
     width: 40,
