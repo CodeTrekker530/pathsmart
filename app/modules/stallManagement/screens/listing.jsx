@@ -69,7 +69,7 @@ export default function ListingPage() {
     setShowProductSubmenu(!showProductSubmenu);
   };
   const handleLogout = () => {
-    router.push("/screens/loginScreen");
+    router.push("/");
   };
   const handleAddProduct = () => {
     setShowAddModal(true);
