@@ -39,7 +39,7 @@ export default function QualityGuidePage() {
   // Function to handle logout
   const handleLogout = () => {
     // Navigate back to the login page
-    router.push("/screens/loginScreen");
+    router.push("/");
   };
 
   const handleAddEntry = () => {

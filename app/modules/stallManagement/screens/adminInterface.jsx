@@ -42,7 +42,7 @@ export default function AdminInterface() {
   // Function to handle logout
   const handleLogout = () => {
     // Navigate back to the login page
-    router.push("/screens/loginScreen");
+    router.push("/");
   };
 
   // Function to handle search

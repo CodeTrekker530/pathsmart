@@ -34,7 +34,7 @@ export default function Account() {
   // Function to handle logout
   const handleLogout = () => {
     // Navigate back to the login page
-    router.push("/screens/loginScreen");
+    router.push("/");
   };
 
   // Render the sidebar menu
