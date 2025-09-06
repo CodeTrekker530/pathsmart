@@ -1,4 +1,6 @@
 import React from "react";
+import * as ImagePicker from "expo-image-picker";
+import { supabase } from "../../../../backend/supabaseClient";
 import {
   View,
   Text,
@@ -9,10 +11,38 @@ import {
 } from "react-native";
 
 export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
-  // Dummy image upload handler (replace with real upload logic)
-  const handleImageUpload = () => {
-    // You can integrate an image picker here
-    alert("Image upload not implemented");
+  // Image upload handler using Expo ImagePicker and Supabase Storage
+  const handleImageUpload = async () => {
+    // Request permission and pick image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "image",
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const fileName = `product_${Date.now()}.jpg`;
+
+      // Read file as base64
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { data, error } = await supabase.storage
+        .from("pns-images")
+        .upload(fileName, blob, {
+          contentType: "image/jpeg",
+        });
+      if (error) {
+        alert("Image upload failed: " + error.message);
+        return;
+      }
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("pns-images")
+        .getPublicUrl(fileName);
+      setForm({ ...form, image: urlData.publicUrl });
+    }
   };
 
   return (

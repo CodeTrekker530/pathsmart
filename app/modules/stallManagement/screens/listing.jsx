@@ -12,6 +12,14 @@ import { supabase } from "../../../../backend/supabaseClient";
 import AddListingModal from "../components/addListingModal";
 import EditListingModal from "../components/editListingModal";
 
+// Create a new product/service in Supabase
+async function createProduct(product) {
+  const { data, error } = await supabase
+    .from("ProductandServices")
+    .insert([product]);
+  return { data, error };
+}
+
 export default function ListingPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,8 +90,21 @@ export default function ListingPage() {
       category: "",
     });
   };
+  // Delete a product and its associated listings
   const handleDeleteProduct = async id => {
-    // First, delete all listings that reference this product
+    // First, get the product to find its image URL
+    const { data: productData, error: fetchError } = await supabase
+      .from("ProductandServices")
+      .select("pns_image")
+      .eq("pns_id", id)
+      .single();
+
+    if (fetchError) {
+      console.error("Failed to fetch product for image deletion:", fetchError);
+      return;
+    }
+
+    // Delete all listings that reference this product
     const { error: listingError } = await supabase
       .from("listing")
       .delete()
@@ -92,6 +113,18 @@ export default function ListingPage() {
     if (listingError) {
       console.error("Failed to delete related listings:", listingError);
       return;
+    }
+
+    // Delete the image from Supabase Storage if it exists
+    if (productData && productData.pns_image) {
+      try {
+        // Extract the file name from the public URL
+        const urlParts = productData.pns_image.split("/");
+        const fileName = urlParts[urlParts.length - 1];
+        await supabase.storage.from("pns-images").remove([fileName]);
+      } catch (e) {
+        console.error("Failed to delete image from storage:", e);
+      }
     }
 
     // Then, delete the product itself
@@ -106,16 +139,55 @@ export default function ListingPage() {
       fetchProducts(); // Refresh the list
     }
   };
-  const handleSubmitModal = () => {
-    // Add logic to submit new product (e.g., call Supabase)
-    setShowAddModal(false);
-    setForm({
-      image: "",
-      name: "",
-      bicol_name: "",
-      tagalog_name: "",
-      category: "",
-    });
+  // Update product details
+  const handleUpdateProduct = async updatedProduct => {
+    // Optimistically update local state
+    setPns(prev =>
+      prev.map(item =>
+        item.pns_id === updatedProduct.pns_id
+          ? { ...item, ...updatedProduct }
+          : item
+      )
+    );
+    setShowEditModal(false);
+
+    const { error } = await supabase
+      .from("ProductandServices")
+      .update(updatedProduct)
+      .eq("pns_id", updatedProduct.pns_id);
+
+    if (error) {
+      // Revert local state and show error
+      fetchProducts(); // fallback to server state
+      alert("Update failed: " + error.message);
+    } else {
+      fetchProducts(); // Optionally refresh from server
+    }
+  };
+
+  // Add new product
+  const handleAddProductSubmit = async () => {
+    // Validate required fields
+    if (!form.name || !form.category || !form.image) {
+      alert("Name, Category, and Image are required fields.");
+      return;
+    }
+    const newProduct = {
+      pns_image: form.image,
+      name: form.name,
+      bicol_name: form.bicol_name,
+      tagalog_name: form.tagalog_name,
+      pns_category: form.category,
+    };
+    // Insert product only after image is uploaded and form.image is set
+    const { error } = await createProduct(newProduct);
+    if (error) {
+      alert("Failed to add product: " + error.message);
+      return;
+    }
+    // Only fetch products after insert is confirmed
+    await fetchProducts();
+    handleCloseModal();
   };
 
   // Render the sidebar menu
@@ -293,7 +365,7 @@ export default function ListingPage() {
           {showAddModal && (
             <AddListingModal
               onClose={handleCloseModal}
-              onSubmit={handleSubmitModal}
+              onSubmit={handleAddProductSubmit}
               form={form}
               setForm={setForm}
             />
@@ -363,7 +435,7 @@ export default function ListingPage() {
             {showEditModal && (
               <EditListingModal
                 onClose={() => setShowEditModal(false)}
-                onSubmit={() => setShowEditModal(false)}
+                onSubmit={handleUpdateProduct}
                 form={selectedProduct}
                 setForm={setSelectedProduct}
               />
@@ -484,6 +556,7 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     flex: 1,
+    textTransform: "capitalize",
   },
   productImage: {
     width: 60,

@@ -7,11 +7,20 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 export default function EditListingModal({ onClose, onSubmit, form, setForm }) {
-  const handleImageUpload = () => {
-    // Integrate your image picker here
-    alert("Image upload not implemented");
+  const handleImageUpload = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "image",
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setForm({ ...form, pns_image: result.assets[0].uri });
+    }
   };
 
   return (
@@ -57,7 +66,10 @@ export default function EditListingModal({ onClose, onSubmit, form, setForm }) {
           onChangeText={text => setForm({ ...form, pns_category: text })}
           placeholder="Category"
         />
-        <TouchableOpacity style={styles.updateButton} onPress={onSubmit}>
+        <TouchableOpacity
+          style={styles.updateButton}
+          onPress={() => onSubmit(form)}
+        >
           <Text style={styles.updateButtonText}>Update</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
