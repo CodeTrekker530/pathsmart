@@ -82,6 +82,30 @@ export default function ListingPage() {
       category: "",
     });
   };
+  const handleDeleteProduct = async id => {
+    // First, delete all listings that reference this product
+    const { error: listingError } = await supabase
+      .from("listing")
+      .delete()
+      .eq("pns_id", id);
+
+    if (listingError) {
+      console.error("Failed to delete related listings:", listingError);
+      return;
+    }
+
+    // Then, delete the product itself
+    const { error: productError } = await supabase
+      .from("ProductandServices")
+      .delete()
+      .eq("pns_id", id);
+
+    if (productError) {
+      console.error("Delete failed:", productError);
+    } else {
+      fetchProducts(); // Refresh the list
+    }
+  };
   const handleSubmitModal = () => {
     // Add logic to submit new product (e.g., call Supabase)
     setShowAddModal(false);
@@ -322,7 +346,10 @@ export default function ListingPage() {
                         style={styles.actionIcon}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteButton}>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteProduct(item.pns_id)}
+                    >
                       <Image
                         source={require("../../../assets/delete-icon.svg")}
                         style={styles.actionIcon}
