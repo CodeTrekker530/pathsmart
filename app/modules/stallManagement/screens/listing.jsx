@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { supabase } from "../../../../backend/supabaseClient";
 import AddListingModal from "../components/addListingModal";
+import EditListingModal from "../components/editListingModal";
 
 export default function ListingPage() {
   const router = useRouter();
@@ -20,6 +21,9 @@ export default function ListingPage() {
   const [showProductSubmenu, setShowProductSubmenu] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [pns, setPns] = useState([]);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const filteredProducts = pns.filter(item =>
     item.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -306,7 +310,13 @@ export default function ListingPage() {
                     </Text>
                   </View>
                   <View style={[styles.tableCell, styles.actionsCell]}>
-                    <TouchableOpacity style={styles.editButton}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => {
+                        setSelectedProduct(item);
+                        setShowEditModal(true);
+                      }}
+                    >
                       <Image
                         source={require("../../../assets/edit-icon.svg")}
                         style={styles.actionIcon}
@@ -321,6 +331,15 @@ export default function ListingPage() {
                   </View>
                 </View>
               ))
+            )}
+            {/* Edit modal pop-up */}
+            {showEditModal && (
+              <EditListingModal
+                onClose={() => setShowEditModal(false)}
+                onSubmit={() => setShowEditModal(false)}
+                form={selectedProduct}
+                setForm={setSelectedProduct}
+              />
             )}
           </View>
 
@@ -561,18 +580,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   pagination: {
+    zIndex: -1,
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    left: 0,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
     paddingVertical: 20,
     backgroundColor: "#fff",
-    zIndex: 10,
     borderTopWidth: 1,
     borderTopColor: "#eee",
+    marginTop: 24, // optional, for spacing
   },
   pageButton: {
     width: 40,
