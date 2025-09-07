@@ -12,6 +12,7 @@ import {
 
 export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
   const [uploading, setUploading] = React.useState(false);
+  const MAX_FILE_SIZE = 1024 * 1024; // 1MB in bytes
   // Image upload handler using Expo ImagePicker and Supabase Storage
   const handleImageUpload = async () => {
     setUploading(true);
@@ -29,6 +30,12 @@ export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
         // Read file as base64
         const response = await fetch(uri);
         const blob = await response.blob();
+
+        if (blob.size > MAX_FILE_SIZE) {
+          alert("Image size must be less than or equal to 1MB or 1024KB.");
+          setUploading(false);
+          return;
+        }
 
         const { error } = await supabase.storage
           .from("pns-images")
