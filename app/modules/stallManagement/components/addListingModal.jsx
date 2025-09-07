@@ -11,38 +11,45 @@ import {
 } from "react-native";
 
 export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
+  const [uploading, setUploading] = React.useState(false);
   // Image upload handler using Expo ImagePicker and Supabase Storage
   const handleImageUpload = async () => {
-    // Request permission and pick image
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "image",
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      const uri = asset.uri;
-      const fileName = `product_${Date.now()}.jpg`;
+    setUploading(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "image",
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const uri = asset.uri;
+        const fileName = `product_${Date.now()}.jpg`;
 
-      // Read file as base64
-      const response = await fetch(uri);
-      const blob = await response.blob();
+        // Read file as base64
+        const response = await fetch(uri);
+        const blob = await response.blob();
 
-      const { data, error } = await supabase.storage
-        .from("pns-images")
-        .upload(fileName, blob, {
-          contentType: "image/jpeg",
-        });
-      if (error) {
-        alert("Image upload failed: " + error.message);
-        return;
+        const { error } = await supabase.storage
+          .from("pns-images")
+          .upload(fileName, blob, {
+            contentType: "image/jpeg",
+          });
+        if (error) {
+          alert("Image upload failed: " + error.message);
+          setUploading(false);
+          return;
+        }
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from("pns-images")
+          .getPublicUrl(fileName);
+        setForm({ ...form, image: urlData.publicUrl });
       }
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("pns-images")
-        .getPublicUrl(fileName);
-      setForm({ ...form, image: urlData.publicUrl });
+    } catch (e) {
+      alert("Image upload failed: " + e.message);
     }
+    setUploading(false);
   };
 
   return (
@@ -52,8 +59,13 @@ export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
         <TouchableOpacity
           style={styles.imageUpload}
           onPress={handleImageUpload}
+          disabled={uploading}
         >
-          {form.image ? (
+          {uploading ? (
+            <View style={styles.uploadPlaceholder}>
+              <Text style={styles.loadingText}>Uploading...</Text>
+            </View>
+          ) : form.image ? (
             <Image source={{ uri: form.image }} style={styles.uploadedImage} />
           ) : (
             <View style={styles.uploadPlaceholder}>
@@ -98,6 +110,11 @@ export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
 }
 
 const styles = StyleSheet.create({
+  loadingText: {
+    fontSize: 16,
+    color: "#888",
+    textAlign: "center",
+  },
   overlay: {
     position: "fixed",
     top: 0,
