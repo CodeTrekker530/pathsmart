@@ -30,6 +30,7 @@ export default function ListingPage() {
   const [showProductSubmenu, setShowProductSubmenu] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [pns, setPns] = useState([]);
+  const [isAdding, setIsAdding] = useState(false);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -168,6 +169,9 @@ export default function ListingPage() {
 
   // Add new product
   const handleAddProductSubmit = async () => {
+    if (isAdding) return;
+    setIsAdding(true);
+
     // Validate required fields
     if (!form.name || !form.category || !form.image) {
       alert("Name, Category, and Image are required fields.");
@@ -189,6 +193,7 @@ export default function ListingPage() {
     // Only fetch products after insert is confirmed
     await fetchProducts();
     handleCloseModal();
+    setIsAdding(false);
   };
 
   // Render the sidebar menu
@@ -364,7 +369,11 @@ export default function ListingPage() {
               </TouchableOpacity>
             </View>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddProduct}>
+          <TouchableOpacity
+            style={styles.addButton}
+            disabled={isAdding}
+            onPress={handleAddProduct}
+          >
             <Text style={styles.addButtonIcon}>+</Text>
             <Text style={styles.addButtonText}>Add new product or service</Text>
           </TouchableOpacity>
@@ -387,7 +396,7 @@ export default function ListingPage() {
             {filteredProducts.length === 0 ? (
               <View style={{ alignItems: "center", marginTop: 100 }}>
                 <Text style={{ color: "#999", fontSize: 16 }}>
-                  No results found.
+                  Nothing to show.
                 </Text>
               </View>
             ) : (
