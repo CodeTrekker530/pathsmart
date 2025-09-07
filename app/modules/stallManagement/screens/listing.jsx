@@ -22,6 +22,7 @@ async function createProduct(product) {
 
 export default function ListingPage() {
   const router = useRouter();
+  const ITEMS_PER_PAGE = 5;
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("listing");
@@ -330,6 +331,11 @@ export default function ListingPage() {
     </View>
   );
 
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <View style={styles.container}>
       {renderSidebar()}
@@ -385,7 +391,7 @@ export default function ListingPage() {
                 </Text>
               </View>
             ) : (
-              filteredProducts.map((item, idx) => (
+              paginatedProducts.map((item, idx) => (
                 <View style={styles.tableRow} key={item.id || idx}>
                   <View style={styles.tableCell}>
                     <Image
@@ -442,80 +448,57 @@ export default function ListingPage() {
             )}
           </View>
 
-          {/* pagination */}
+          {/* Fixed Pagination Controls */}
           <View style={styles.pagination}>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(1)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.activePageButtonText,
-                ]}
-              >
-                1
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 2 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(2)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 2 && styles.activePageButtonText,
-                ]}
-              >
-                2
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 3 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(3)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 3 && styles.activePageButtonText,
-                ]}
-              >
-                3
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 4 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(4)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 4 && styles.activePageButtonText,
-                ]}
-              >
-                4
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={() => {
-                currentPage < 4 && handleChangePage(currentPage + 1);
-              }}
-            >
-              <Text style={styles.nextButtonText}>Next</Text>
-            </TouchableOpacity>
+            {filteredProducts.length > 0 && (
+              <View style={styles.wrapper}>
+                {/* Previous Button */}
+                <TouchableOpacity
+                  style={styles.nextButton}
+                  onPress={() => handleChangePage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <Text style={styles.nextButtonText}>Previous</Text>
+                </TouchableOpacity>
+                {/* Page Buttons */}
+                {Array.from(
+                  {
+                    length: Math.ceil(filteredProducts.length / ITEMS_PER_PAGE),
+                  },
+                  (_, pageIdx) => (
+                    <TouchableOpacity
+                      key={pageIdx + 1}
+                      style={[
+                        styles.pageButton,
+                        currentPage === pageIdx + 1 && styles.activePageButton,
+                      ]}
+                      onPress={() => handleChangePage(pageIdx + 1)}
+                    >
+                      <Text
+                        style={[
+                          styles.pageButtonText,
+                          currentPage === pageIdx + 1 &&
+                            styles.activePageButtonText,
+                        ]}
+                      >
+                        {pageIdx + 1}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                )}
+                {/* Next Button */}
+                <TouchableOpacity
+                  style={styles.nextButton}
+                  onPress={() => handleChangePage(currentPage + 1)}
+                  disabled={
+                    currentPage >=
+                    Math.ceil(filteredProducts.length / ITEMS_PER_PAGE)
+                  }
+                >
+                  <Text style={styles.nextButtonText}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -694,6 +677,12 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
     marginTop: 24, // optional, for spacing
   },
+  wrapper: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+  },
   pageButton: {
     width: 40,
     height: 40,
@@ -716,10 +705,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginLeft: 8,
+    minWidth: 70,
+    alignItems: "center",
   },
   nextButtonText: {
     color: "#333",
     fontWeight: "500",
+    textDecorationLine: "underline",
   },
   logoImage: {
     width: 24,
