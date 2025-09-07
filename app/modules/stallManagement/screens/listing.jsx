@@ -169,6 +169,14 @@ export default function ListingPage() {
 
   // Add new product
   const handleAddProductSubmit = async () => {
+    const exists = pns.some(
+      item => item.name.trim().toLowerCase() === form.name.trim().toLowerCase()
+    );
+    if (exists) {
+      alert("A product with this name or image already exists.");
+      return;
+    }
+
     if (isAdding) return;
     setIsAdding(true);
 
