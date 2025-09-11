@@ -14,7 +14,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import SearchBar from "./components/searchBar";
 import { useRouter } from "expo-router"; // ⬅️ import router
 
-
 export default function Home() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < 768; // responsive breakpoint
@@ -40,12 +39,13 @@ export default function Home() {
           style={styles.logo}
         />
         <Text style={styles.logo_name}>PathSmart</Text>
-
-      <SearchBar />  {/* reused here */}
-
-
-        <TouchableOpacity style={styles.loginButton}
-          onPress={() => { router.push("/screens/loginScreen"); }}>
+        <SearchBar />
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => {
+            router.push("/screens/loginScreen");
+          }}
+        >
           <Text style={{ fontWeight: "600", color: "#0766AD" }}>Login</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -81,8 +81,12 @@ export default function Home() {
                   Tutorial
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.bigButton}
-              onPress={() => { router.push("/ShoppingList"); }}>
+              <TouchableOpacity
+                style={styles.bigButton}
+                onPress={() => {
+                  router.push("/ShoppingList");
+                }}
+              >
                 <Text style={styles.bigButtonText}>Create Shopping List</Text>
               </TouchableOpacity>
             </View>
