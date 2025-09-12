@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
 import {
   StyleSheet,
   Text,
@@ -7,10 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  TouchableWithoutFeedback,
-  Keyboard,
   Platform,
+  ActivityIndicator,
 } from "react-native";
+import { supabase } from "../../backend/supabaseClient";
+import { useAuth } from "../context/AuthContext";
+import bcrypt from "bcryptjs";
 
 export default function LoginPage() {
   const [userType, setUserType] = useState(null);
@@ -20,11 +21,64 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [usernameFocused, setUsernameFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const router = useRouter();
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  const handleLogin = () => {
-    // console.log("Login attempted with:", { userType, username, password });
-    router.push("/modules/stallManagement/screens/adminInterface");
+  const { login, loading } = useAuth();
+
+  // Show loading spinner while auth context is initializing
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  const handleLogin = async (username, password) => {
+    if (!userType) {
+      alert("Please select a user type.");
+      return;
+    }
+    if (!username || !password) {
+      alert("Username and password are required fields");
+      return;
+    }
+
+    setLoginLoading(true);
+
+    try {
+      // Choose table based on userType
+      const table =
+        userType === "MEPO employee"
+          ? "mepo_employee_account"
+          : "stall_owner_account";
+
+      // Query for the user in the selected table
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .eq("username", username)
+        .single();
+
+      if (error || !data) {
+        alert(
+          `Invalid credentials for ${userType}. Please check your username, password, and selected user type.`
+        );
+        return;
+      }
+
+      const passwordMatch = await bcrypt.compare(password, data.password);
+      if (passwordMatch) {
+        login({ ...data, userType });
+      } else {
+        alert("Invalid username or password");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("An error occurred during login. Please try again.");
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   return (
@@ -103,6 +157,7 @@ export default function LoginPage() {
               onChangeText={setUsername}
               onFocus={() => setUsernameFocused(true)}
               onBlur={() => setUsernameFocused(false)}
+              editable={!loginLoading}
             />
           </View>
 
@@ -125,8 +180,12 @@ export default function LoginPage() {
               onChangeText={setPassword}
               onFocus={() => setPasswordFocused(true)}
               onBlur={() => setPasswordFocused(false)}
+              editable={!loginLoading}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              disabled={loginLoading}
+            >
               <Image
                 source={
                   showPassword
@@ -144,8 +203,19 @@ export default function LoginPage() {
           </TouchableOpacity>
 
           {/* Login Button */}
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Login</Text>
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              loginLoading && styles.loginButtonDisabled,
+            ]}
+            onPress={() => handleLogin(username, password)}
+            disabled={loginLoading}
+          >
+            {loginLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Login</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -187,8 +257,6 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   logoBox: {
-    // width: 36,
-    // height: 36,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -201,7 +269,6 @@ const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
     maxWidth: 400,
-    // alignSelf: "center",
   },
   systemTitle: {
     fontSize: 24,
@@ -293,6 +360,9 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     alignItems: "center",
   },
+  loginButtonDisabled: {
+    backgroundColor: "#a5d6a7",
+  },
   loginButtonText: {
     color: "#fff",
     fontWeight: "bold",
@@ -303,7 +373,7 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#f0f0f0",
     display: Platform.OS === "web" ? "flex" : "none",
-    position: "relative", // For absolute positioning of children
+    position: "relative",
   },
   backgroundImage: {
     width: "100%",
@@ -317,6 +387,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4 )", // Black with 50% opacity
+    backgroundColor: "rgba(0, 0, 0, 0.4 )",
   },
 });

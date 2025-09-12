@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AccountCreation() {
   const [firstName, setFirstName] = useState("");
@@ -17,6 +18,8 @@ export default function AccountCreation() {
   const [activeTab, setActiveTab] = useState("users");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(false);
+
+  const { logout } = useAuth();
 
   // Function to handle sidebar hover
   const expandSidebar = () => {
@@ -36,8 +39,8 @@ export default function AccountCreation() {
 
   // Function to handle logout
   const handleLogout = () => {
-    // Navigate back to the login page
-    router.push("/");
+    logout();
+    router.replace("/screens/loginScreen");
   };
 
   const handleCreateAccount = () => {
@@ -176,7 +179,10 @@ export default function AccountCreation() {
           />
           {sidebarExpanded && <Text style={styles.menuText}>Account</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleLogout()}
+        >
           <Image
             source={require("../../../assets/logout.png")}
             style={styles.logoImage}

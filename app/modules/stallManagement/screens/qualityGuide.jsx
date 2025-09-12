@@ -7,7 +7,8 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function QualityGuidePage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function QualityGuidePage() {
   const [activeTab, setActiveTab] = useState("quality-guide");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(true); // Start with submenu open since we're in Product/Services
+
+  const { logout } = useAuth();
 
   // No products available in this example
   const products = [];
@@ -38,8 +41,8 @@ export default function QualityGuidePage() {
 
   // Function to handle logout
   const handleLogout = () => {
-    // Navigate back to the login page
-    router.push("/");
+    logout();
+    router.replace("/screens/loginScreen");
   };
 
   const handleAddEntry = () => {
@@ -185,7 +188,10 @@ export default function QualityGuidePage() {
           />
           {sidebarExpanded && <Text style={styles.menuText}>Account</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleLogout()}
+        >
           <Image
             source={require("../../../assets/logout.png")}
             style={styles.logoImage}

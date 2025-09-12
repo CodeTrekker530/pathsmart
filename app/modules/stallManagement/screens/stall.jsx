@@ -7,7 +7,8 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function StallPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function StallPage() {
   const [activeTab, setActiveTab] = useState("settings");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(false);
+
+  const { logout } = useAuth();
 
   // No stalls available in this example
   const stalls = [];
@@ -38,8 +41,8 @@ export default function StallPage() {
 
   // Function to handle logout
   const handleLogout = () => {
-    // Navigate back to the login page
-    router.push("/");
+    logout();
+    router.replace("/screens/loginScreen");
   };
 
   const handleSearch = text => {
@@ -180,7 +183,10 @@ export default function StallPage() {
           />
           {sidebarExpanded && <Text style={styles.menuText}>Account</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleLogout()}
+        >
           <Image
             source={require("../../../assets/logout.png")}
             style={styles.logoImage}

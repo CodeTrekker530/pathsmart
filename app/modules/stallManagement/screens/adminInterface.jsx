@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,12 +13,14 @@ import {
 
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminInterface() {
   const [searchQuery, setSearchQuery] = useState("");
   const [zoom, setZoom] = useState(1);
   const [activeTab, setActiveTab] = useState("map");
   const router = useRouter();
+  const { logout } = useAuth();
 
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(false);
@@ -41,8 +43,8 @@ export default function AdminInterface() {
 
   // Function to handle logout
   const handleLogout = () => {
-    // Navigate back to the login page
-    router.push("/");
+    logout();
+    router.replace("/screens/loginScreen");
   };
 
   // Function to handle search
@@ -190,7 +192,10 @@ export default function AdminInterface() {
           />
           {sidebarExpanded && <Text style={styles.menuText}>Account</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleLogout()}
+        >
           <Image
             source={require("../../../assets/logout.png")}
             style={styles.logoImage}

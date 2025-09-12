@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { supabase } from "../../../../backend/supabaseClient";
 import AddListingModal from "../components/addListingModal";
 import EditListingModal from "../components/editListingModal";
+import { useAuth } from "../../../context/AuthContext";
 
 // Create a new product/service in Supabase
 async function createProduct(product) {
@@ -34,6 +35,8 @@ export default function ListingPage() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const { logout } = useAuth();
 
   const filteredProducts = pns.filter(item =>
     item.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -70,8 +73,10 @@ export default function ListingPage() {
   const toggleProductSubmenu = () => {
     setShowProductSubmenu(!showProductSubmenu);
   };
+  // Function to handle logout
   const handleLogout = () => {
-    router.push("/");
+    logout();
+    router.replace("/screens/loginScreen");
   };
   const handleAddProduct = () => {
     setShowAddModal(true);
@@ -333,7 +338,10 @@ export default function ListingPage() {
           />
           {sidebarExpanded && <Text style={styles.menuText}>Account</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => handleLogout()}
+        >
           <Image
             source={require("../../../assets/logout.png")}
             style={styles.logoImage}
