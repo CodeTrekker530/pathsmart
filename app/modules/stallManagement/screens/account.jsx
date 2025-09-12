@@ -15,7 +15,72 @@ export default function Account() {
   const [activeTab, setActiveTab] = useState("user-account");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(false);
-  const { logout } = useAuth();
+  const { logout, user, loading } = useAuth();
+
+  // Function to get user's full name
+  const getFullName = () => {
+    if (!user) return "Unknown User";
+
+    if (user.userType === "MEPO employee") {
+      return `${user.name}`.trim() || user.username || "MEPO Employee";
+    }
+    return user.username || "Unknown User";
+  };
+
+  // Function to get user's role
+  const getUserRole = () => {
+    if (!user) return "User";
+
+    if (user.userType === "MEPO employee") {
+      return user.role;
+    }
+
+    if (user.userType === "Stall Owner") {
+      return "Stall Owner";
+    }
+
+    return user.userType || "User";
+  };
+
+  // Function to get user's contact info
+  const getUserContact = () => {
+    if (!user) return null;
+
+    if (user.userType === "MEPO employee") {
+      return user.contact_number || null;
+    }
+
+    if (user.userType === "Stall Owner") {
+      return user.phone_number || null;
+    }
+
+    return null;
+  };
+
+  // Show loading if auth is still loading
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1976D2" />
+        <Text style={styles.loadingText}>Loading account...</Text>
+      </View>
+    );
+  }
+
+  // Show error if no user (shouldn't happen due to auth guards)
+  if (!user) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No user data available</Text>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => router.replace("/screens/loginScreen")}
+        >
+          <Text style={styles.loginButtonText}>Go to Login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // Function to handle sidebar hover
   const expandSidebar = () => {
@@ -181,7 +246,7 @@ export default function Account() {
       </View>
     </View>
   );
-
+  const userContact = getUserContact();
   return (
     <View style={styles.container}>
       {renderSidebar()}
@@ -191,31 +256,29 @@ export default function Account() {
         <View style={styles.profileContainer}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              {/* You can use an actual image here if available */}
-            </View>
-            <View style={styles.editIconContainer}>
-              <Pressable style={styles.editButton}>
-                <Text style={styles.editIcon}>✏️</Text>
-              </Pressable>
+              <Text style={styles.avatarText}>
+                {getFullName()
+                  .split(" ")
+                  .map(name => name[0])
+                  .join("")
+                  .toUpperCase()}
+              </Text>
             </View>
           </View>
 
-          <Text style={styles.name}>Joel Petallio</Text>
-          <Text style={styles.role}>Administrator</Text>
+          <Text style={styles.name}>{getFullName()}</Text>
+          <Text style={styles.role}>{getUserRole()}</Text>
 
           <TouchableOpacity style={styles.phoneLink}>
-            <Text style={styles.phoneText}>Add your phone number</Text>
+            <Text style={styles.phoneText}>
+              {userContact ? userContact : "Add your phone number"}
+            </Text>
           </TouchableOpacity>
 
           <View style={styles.credentialsContainer}>
             <View style={styles.credentialRow}>
-              <Text style={styles.credentialLabel}>username:</Text>
-              <Text style={styles.credentialValue}>joelpetallio</Text>
-            </View>
-
-            <View style={styles.credentialRow}>
-              <Text style={styles.credentialLabel}>password:</Text>
-              <Text style={styles.credentialValue}>joelpetallio</Text>
+              <Text style={styles.credentialLabel}>Username:</Text>
+              <Text style={styles.credentialValue}>{user.username}</Text>
             </View>
           </View>
         </View>
@@ -280,11 +343,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 4,
+    textTransform: "capitalize",
   },
   role: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#757575",
     marginBottom: 16,
+    textTransform: "uppercase",
   },
   phoneLink: {
     marginBottom: 40,
