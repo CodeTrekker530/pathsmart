@@ -16,7 +16,7 @@ import { useAuth } from "../../../context/AuthContext";
 // Create a new product/service in Supabase
 async function createProduct(product) {
   const { data, error } = await supabase
-    .from("ProductandServices")
+    .from("product_and_services")
     .insert([product]);
   return { data, error };
 }
@@ -56,7 +56,7 @@ export default function ListingPage() {
 
   const fetchProducts = async () => {
     const { data, error } = await supabase
-      .from("ProductandServices")
+      .from("product_and_services")
       .select("*");
     if (!error && data) {
       setPns(data);
@@ -101,7 +101,7 @@ export default function ListingPage() {
   const handleDeleteProduct = async id => {
     // First, get the product to find its image URL
     const { data: productData, error: fetchError } = await supabase
-      .from("ProductandServices")
+      .from("product_and_services")
       .select("pns_image")
       .eq("pns_id", id)
       .single();
@@ -136,7 +136,7 @@ export default function ListingPage() {
 
     // Then, delete the product itself
     const { error: productError } = await supabase
-      .from("ProductandServices")
+      .from("product_and_services")
       .delete()
       .eq("pns_id", id);
 
@@ -178,7 +178,7 @@ export default function ListingPage() {
       item => item.name.trim().toLowerCase() === form.name.trim().toLowerCase()
     );
     if (exists) {
-      alert("A product with this name or image already exists.");
+      alert("A product or service with this name already exists.");
       return;
     }
 
