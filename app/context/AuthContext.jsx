@@ -36,8 +36,8 @@ export function AuthProvider({ children }) {
       // Authenticated user at root, redirect to admin interface
       router.replace("/modules/stallManagement/screens/adminInterface");
     } else if (!user && segments.length === 0) {
-      // Unauthenticated user at root, redirect to login
-      router.replace("/screens/loginScreen");
+      // init screen for unauthenticated users
+      router.replace("/");
     }
   }, [user, segments, loading, router]);
 
