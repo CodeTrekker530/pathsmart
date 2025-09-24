@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
       router.replace("/screens/loginScreen");
     } else if (user && inAuthGroup) {
       // Authenticated user trying to access login screen
-      router.replace("/modules/storeManagement/screens/dashboard");
+      router.replace("/modules/stallManagement/screens/adminInterface");
     } else if (user && segments.length === 0) {
       // Authenticated user at root, redirect to dashboard
       router.replace("/modules/stallManagement/screens/adminInterface");
