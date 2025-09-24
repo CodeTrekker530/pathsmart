@@ -2,18 +2,14 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useSelection } from '../../../context/SelectionContext';
 
 export default function AddListings() {
   const [importModalVisible, setImportModalVisible] = React.useState(false);
   const [modalVisible, setModalVisible] = React.useState(false);
   const [successVisible, setSuccessVisible] = React.useState(false);
-  const categories = [
-    'Vegetable', 'Meat',
-    'Fruit', 'Fish',
-    'Poultry', 'Hair',
-    'Grocery', 'Pasalubong'
-  ];
   const router = useRouter();
+  const { addListing } = useSelection();
   // Sample listings data
   const listings = [
     {
@@ -29,10 +25,12 @@ export default function AddListings() {
   ];
 
   const handleAdd = (listing) => {
+    // Add the listing to the context
+    addListing(listing);
     setSuccessVisible(true);
     setTimeout(() => {
       setSuccessVisible(false);
-      router.replace('/modules/storeManagement/screens/ManageBusiness');
+      router.replace('/modules/storeManagement/screens/ViewListings');
     }, 1200);
   };
 
@@ -104,17 +102,36 @@ export default function AddListings() {
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>Filter by category</Text>
+            <View style={styles.categoryModalBox}>
+              <Text style={styles.categoryModalTitle}>Filter by category</Text>
               <View style={styles.categoryGrid}>
-                {categories.map((cat, idx) => (
-                  <View key={cat} style={styles.categoryCell}>
-                    <Text style={styles.categoryText}>{cat}</Text>
-                  </View>
-                ))}
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Vegetable</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Meat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Fruit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Fish</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Poultry</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Hair</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Grocery</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.categoryButton}>
+                  <Text style={styles.categoryButtonText}>Pasalubong</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.closeModalBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.closeModalText}>Close</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -137,9 +154,9 @@ export default function AddListings() {
           <View style={styles.successNoteBox}>
             <TouchableOpacity style={styles.successManageBtn} onPress={() => {
               setSuccessVisible(false);
-              router.replace('/modules/storeManagement/screens/ManageBusiness');
+              router.replace('/modules/storeManagement/screens/ViewListings');
             }}>
-              <Text style={styles.successManageBtnText}>Go to Manage business</Text>
+              <Text style={styles.successManageBtnText}>View Your Listings</Text>
             </TouchableOpacity>
             <View style={styles.successRow}>
               <Text style={styles.successIcon}>✓</Text>
@@ -210,58 +227,67 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContainer: {
+  categoryModalBox: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#eef2f3ff',
-    padding: 24,
-    width: 320,
-    alignItems: 'center',
+    borderRadius: 18,
+    width: 400,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  categoryModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     color: '#222',
-    marginBottom: 18,
+    marginBottom: 24,
+    textAlign: 'center',
   },
   categoryGrid: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 24,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    backgroundColor: '#F5F5F5',
+    justifyContent: 'space-between',
+  },
+  categoryButton: {
+    backgroundColor: '#f8f9fa',
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#bbb',
-    padding: 16,
-    marginBottom: 18,
-    width: '100%',
-  },
-  categoryCell: {
-    width: '40%',
-    margin: '5%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginBottom: 12,
+    minHeight: 45,
+    justifyContent: 'center',
+    width: '48%',
   },
-  categoryText: {
+  categoryButtonText: {
     fontSize: 16,
     color: '#222',
-    textAlign: 'left',
+    fontWeight: '400',
+    textAlign: 'center',
   },
-  closeModalBtn: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    backgroundColor: '#8a888aff',
-    borderRadius: 6,
+  closeButton: {
+    backgroundColor: '#888',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    alignSelf: 'center',
+    minWidth: 100,
   },
-  closeModalText: {
+  closeButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontWeight: '600',
+    fontSize: 16,
+    textAlign: 'center',
   },
   root: {
     flex: 1,
