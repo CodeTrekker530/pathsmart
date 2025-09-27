@@ -89,6 +89,12 @@ export default function AddListingModal({ onClose, onSubmit, form, setForm }) {
         />
         <TextInput
           style={styles.input}
+          placeholder="Type"
+          value={form.type}
+          onChangeText={text => setForm({ ...form, type: text })}
+        />
+        <TextInput
+          style={styles.input}
           placeholder="Bicol Name"
           value={form.bicol_name}
           onChangeText={text => setForm({ ...form, bicol_name: text })}
@@ -223,3 +229,4 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
+

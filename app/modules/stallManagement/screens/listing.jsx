@@ -48,6 +48,7 @@ export default function ListingPage() {
     bicol_name: "",
     tagalog_name: "",
     category: "",
+    type: "",
   });
 
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function ListingPage() {
     setShowEditModal(false);
 
     const { error } = await supabase
-      .from("ProductandServices")
+      .from("product_and_services")
       .update(updatedProduct)
       .eq("pns_id", updatedProduct.pns_id);
 
@@ -196,6 +197,7 @@ export default function ListingPage() {
       bicol_name: form.bicol_name,
       tagalog_name: form.tagalog_name,
       pns_category: form.category,
+      type: form.type,
     };
     // Insert product only after image is uploaded and form.image is set
     const { error } = await createProduct(newProduct);
@@ -407,6 +409,7 @@ export default function ListingPage() {
               <Text style={styles.tableHeaderCell}>Image</Text>
               <Text style={styles.tableHeaderCell}>Product Name</Text>
               <Text style={styles.tableHeaderCell}>Category</Text>
+              <Text style={styles.tableHeaderCell}>Type</Text>
               <Text style={styles.tableHeaderCell}>Actions</Text>
             </View>
             {filteredProducts.length === 0 ? (
@@ -435,6 +438,9 @@ export default function ListingPage() {
                     <Text style={styles.productCategory}>
                       {item.pns_category}
                     </Text>
+                  </View>
+                  <View style={styles.tableCell}>
+                    <Text style={styles.productCategory}>{item.type}</Text>
                   </View>
                   <View style={[styles.tableCell, styles.actionsCell]}>
                     <TouchableOpacity
@@ -821,5 +827,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     backgroundColor: "#fff",
+  },
+  input: {
+    marginBottom: 16,
   },
 });
