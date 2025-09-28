@@ -9,6 +9,9 @@ import {
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../context/AuthContext";
+import { supabase } from "../../../../backend/supabaseClient";
+import AccountCreationModal from "../components/accountCreationModal";
+import bcrypt from "bcryptjs";
 
 export default function AccountCreation() {
   const [firstName, setFirstName] = useState("");
@@ -18,8 +21,113 @@ export default function AccountCreation() {
   const [activeTab, setActiveTab] = useState("users");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(false);
-
+  const [modalVisible, setModalVisible] = useState(false);
+  const [credentials, setCredentials] = useState({
+    username: "",
+    password: "",
+  });
   const { logout } = useAuth();
+
+  function generateUsername(first, last, existingUsernames) {
+    let base = `${first}_${last}`.toLowerCase().replace(/\s+/g, "");
+    let username = base;
+    let count = 1;
+    while (existingUsernames.includes(username)) {
+      username = `${base}${count}`;
+      count++;
+    }
+    return username;
+  }
+
+  function generatePassword(length = 8) {
+    const chars =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let pass = "";
+    for (let i = 0; i < length; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pass;
+  }
+
+  const handleCreateAccount = async () => {
+    if (!firstName || !lastName) {
+      alert("First and Last names are required");
+      return;
+    }
+
+    // Fetch existing usernames
+    const { data: existing, error } = await supabase
+      .from("stall_owner_account")
+      .select("username");
+    if (error) {
+      alert("Error fetching usernames");
+      return;
+    }
+    const existingUsernames = existing.map(u => u.username);
+
+    // Generate username and password
+    let username = generateUsername(firstName, lastName, existingUsernames);
+    const password = generatePassword();
+
+    // Hash the password
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
+    let insertError;
+    let attempt = 0;
+    let newAccountId = null;
+
+    do {
+      const { data: accountData, error: accError } = await supabase
+        .from("stall_owner_account")
+        .insert([
+          {
+            username,
+            password: hashedPassword,
+          },
+        ])
+        .select("stall_owner_account_id") // get the generated ID back
+        .single();
+
+      insertError = accError;
+      if (!accError) {
+        newAccountId = accountData.stall_owner_account_id; // capture the ID
+      }
+
+      if (insertError && insertError.message.includes("duplicate key value")) {
+        attempt++;
+        username = generateUsername(firstName, lastName, [
+          ...existingUsernames,
+          username,
+        ]);
+      }
+    } while (
+      insertError &&
+      insertError.message.includes("duplicate key value") &&
+      attempt < 50
+    );
+
+    if (insertError) {
+      alert(`Error creating account: ${insertError.message}`);
+      return;
+    }
+
+    // Insert into stall_owner, linking the FK
+    const { error: checkError } = await supabase.from("stall_owner").insert([
+      {
+        first_name: firstName,
+        middle_name: middleName,
+        last_name: lastName,
+        stall_owner_account_id: newAccountId,
+      },
+    ]);
+    if (checkError) {
+      alert(`Error creating stall owner: ${checkError.message}`);
+      return;
+    }
+
+    setCredentials({ username, password });
+    setModalVisible(true);
+  };
 
   // Function to handle sidebar hover
   const expandSidebar = () => {
@@ -41,13 +149,6 @@ export default function AccountCreation() {
   const handleLogout = () => {
     logout();
     router.replace("/screens/loginScreen");
-  };
-
-  const handleCreateAccount = () => {
-    // Handle account creation logic here
-    console.log("Creating account with:", { firstName, middleName, lastName });
-    // Navigate to appropriate screen after account creation
-    router.push("/modules/stallManagement/screens/adminInterface");
   };
 
   // Render the sidebar menu
@@ -255,6 +356,17 @@ export default function AccountCreation() {
         >
           <Text style={styles.buttonText}>Create Account</Text>
         </TouchableOpacity>
+
+        <AccountCreationModal
+          visible={modalVisible}
+          credentials={credentials}
+          onContinue={() => {
+            setModalVisible(false);
+            setFirstName("");
+            setMiddleName("");
+            setLastName("");
+          }}
+        />
       </View>
     </View>
   );

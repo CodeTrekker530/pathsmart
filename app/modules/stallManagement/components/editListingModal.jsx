@@ -50,6 +50,12 @@ export default function EditListingModal({ onClose, onSubmit, form, setForm }) {
         />
         <TextInput
           style={styles.input}
+          value={form.type}
+          onChangeText={text => setForm({ ...form, type: text })}
+          placeholder="Type"
+        />
+        <TextInput
+          style={styles.input}
           value={form.bicol_name}
           onChangeText={text => setForm({ ...form, bicol_name: text })}
           placeholder="Bicol Name"

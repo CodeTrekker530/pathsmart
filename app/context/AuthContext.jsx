@@ -5,6 +5,17 @@ import Cookies from "js-cookie";
 
 const AuthContext = createContext();
 
+// Helper function to get the correct dashboard based on user type
+const getDashboardRoute = userType => {
+  if (userType === "MEPO employee") {
+    return "/modules/stallManagement/screens/adminInterface";
+  } else if (userType === "Stall Owner") {
+    return "/modules/storeManagement/screens/dashboard";
+  }
+
+  return "/modules/stallManagement/screens/adminInterface";
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -31,10 +42,11 @@ export function AuthProvider({ children }) {
       router.replace("/screens/loginScreen");
     } else if (user && inAuthGroup) {
       // Authenticated user trying to access login screen
-      router.replace("/modules/storeManagement/screens/dashboard");
-    } else if (user && segments.length === 0) {
-      // Authenticated user at root, redirect to dashboard
       router.replace("/modules/stallManagement/screens/adminInterface");
+    } else if (user && segments.length === 0) {
+      // Authenticated user at root, redirect to admin interface
+      const dashboardRoute = getDashboardRoute(user.userType);
+      router.replace(dashboardRoute);
     } else if (!user && segments.length === 0) {
       // init screen for unauthenticated users
       router.replace("/");

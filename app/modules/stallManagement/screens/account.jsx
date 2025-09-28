@@ -269,12 +269,6 @@ export default function Account() {
           <Text style={styles.name}>{getFullName()}</Text>
           <Text style={styles.role}>{getUserRole()}</Text>
 
-          <TouchableOpacity style={styles.phoneLink}>
-            <Text style={styles.phoneText}>
-              {userContact ? userContact : "Add your phone number"}
-            </Text>
-          </TouchableOpacity>
-
           <View style={styles.credentialsContainer}>
             <View style={styles.credentialRow}>
               <Text style={styles.credentialLabel}>Username:</Text>
@@ -350,13 +344,6 @@ const styles = StyleSheet.create({
     color: "#757575",
     marginBottom: 16,
     textTransform: "uppercase",
-  },
-  phoneLink: {
-    marginBottom: 40,
-  },
-  phoneText: {
-    color: "#757575",
-    textDecorationLine: "underline",
   },
   credentialsContainer: {
     width: "100%",
