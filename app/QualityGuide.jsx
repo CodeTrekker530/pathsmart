@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,18 +13,73 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import DropDownPicker from "react-native-dropdown-picker";
+import { supabase } from "../backend/supabaseClient";
 
 export default function QualityGuide() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [open, setOpen] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState(null);
-  const [filters, setFilters] = useState([
-    { label: "All", value: "all" },
-    { label: "Fish", value: "fish" },
-    { label: "Meat", value: "meat" },
-    { label: "Vegetables", value: "vegetables" },
-  ]);
+  const [qualityGuideData, setQualityGuideData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [activeTab, setActiveTab] = useState("best");
+
+  const qualityTabs = [
+    { key: "best", label: "BEST" },
+    { key: "good", label: "GOOD" },
+    { key: "bad", label: "BAD" },
+  ];
+
+  useEffect(() => {
+    const fetchQualityGuideData = async () => {
+      let { data, error } = await supabase.from("quality_guide").select(`
+        pns_id,
+        details,
+        product_and_services (
+          name,
+          pns_image
+        )
+      `);
+      if (error) {
+        console.error("Error fetching quality guides:", error.message);
+        return;
+      }
+      setQualityGuideData(data || []);
+      setFilteredData(data || []);
+    };
+    fetchQualityGuideData();
+  }, []);
+
+  // Search filter effect
+  useEffect(() => {
+    if (!search.trim()) {
+      setFilteredData(qualityGuideData);
+      setSelectedIdx(0);
+      return;
+    }
+    const lower = search.toLowerCase();
+    const filtered = qualityGuideData.filter(
+      g =>
+        g.product_and_services?.name?.toLowerCase().includes(lower) ||
+        ["best", "good", "bad"].some(q =>
+          (g.details?.[q]?.descriptions || []).some(d =>
+            d.toLowerCase().includes(lower)
+          )
+        )
+    );
+    setFilteredData(filtered);
+    setSelectedIdx(0);
+  }, [search, qualityGuideData]);
+
+  // Get the currently selected product from filteredData
+  const selectedGuide = filteredData[selectedIdx];
+
+  // Helper for image selection
+  const getProductImage = guide =>
+    guide?.product_and_services?.pns_image
+      ? { uri: guide.product_and_services.pns_image }
+      : guide?.details?.best?.images?.[0]
+        ? { uri: guide.details.best.images[0] }
+        : require("./assets/image.png");
 
   return (
     <>
@@ -60,7 +115,7 @@ export default function QualityGuide() {
           <Text style={styles.pageHeader}>Quality Guide</Text>
         </View>
 
-        {/* Search + Filter Dropdown */}
+        {/* Search */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <Ionicons
@@ -76,81 +131,111 @@ export default function QualityGuide() {
               onChangeText={setSearch}
             />
           </View>
-          <DropDownPicker
-            open={open}
-            value={selectedFilter}
-            items={filters}
-            setOpen={setOpen}
-            setValue={setSelectedFilter}
-            setItems={setFilters}
-            placeholder="Filter"
-            style={styles.dropdown}
-            containerStyle={{ width: 160 }}
-            searchable={true}
-            searchPlaceholder="Type to search..."
-            zIndex={1000}
-            zIndexInverse={3000}
-          />
         </View>
 
         <View style={styles.divider} />
 
-      {/* Scrollable Content */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* General Guide Card */}
-        <View style={styles.card}>
-          <View style={styles.generalGuideRow}>
-            {/* Column 1: Image + Name */}
-            <View style={styles.columnImage}>
+        {/* === PREVIEW SECTION === */}
+        {filteredData.length > 0 && selectedGuide && (
+          <View style={styles.previewCardRow}>
+            {/* Left: Image and Name */}
+            <View style={styles.previewImageCol}>
               <Image
-                source={require("./assets/image.png")}
-                style={styles.guideImage}
+                source={getProductImage(selectedGuide)}
+                style={styles.previewImage}
               />
-              <Text style={styles.guideName}>Fish</Text>
+              <Text style={styles.previewName}>
+                {selectedGuide.product_and_services?.name || "Unknown"}
+              </Text>
             </View>
+            {/* Right: Details with Tabs */}
+            <View style={styles.previewDetailsCol}>
+              {/* Tabs Row */}
+              <View style={styles.tabsRow}>
+                {qualityTabs.map(tab => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[
+                      styles.tabButton,
+                      activeTab === tab.key && styles.activeTabButton,
+                    ]}
+                    onPress={() => setActiveTab(tab.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.tabButtonText,
+                        activeTab === tab.key && styles.activeTabButtonText,
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-            {/* Column 2: First two tips */}
-            <View style={styles.columnTips}>
-              <Text style={styles.tip}>1. Eyes should be clear, not cloudy.</Text>
-              <Text style={styles.tip}>2. Gills must be bright red, not dull.</Text>
-            </View>
-
-            {/* Column 3: Last two tips */}
-            <View style={styles.columnTips}>
-              <Text style={styles.tip}>3. Flesh should be firm, not soft.</Text>
-              <Text style={styles.tip}>4. Smell should be fresh, not sour.</Text>
+              {/* Tab Content */}
+              <View style={styles.tabContent}>
+                {(selectedGuide.details?.[activeTab]?.descriptions || []).map(
+                  (desc, i) => (
+                    <Text style={styles.qualityDesc} key={i}>
+                      {i + 1}. {desc}
+                    </Text>
+                  )
+                )}
+                {selectedGuide.details?.[activeTab]?.images?.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.qualityImagesRow}
+                  >
+                    {selectedGuide.details[activeTab].images.map((img, idx) => (
+                      <Image
+                        key={img + idx}
+                        source={{ uri: img }}
+                        style={styles.qualityImage}
+                      />
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
             </View>
           </View>
-        </View>
+        )}
+
+        {/* Show message if no results */}
+        {filteredData.length === 0 && (
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <Text style={{ fontSize: 18, color: "#888" }}>
+              No quality guide found.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.divider} />
 
-        {/* Specific Items Grid */}
-        <View style={styles.itemsGrid}>
-          <View style={styles.itemCard}>
-            <Image
-              source={require("./assets/image.png")}
-              style={styles.itemImage}
-            />
-            <Text style={styles.itemName}>Lettuce</Text>
+        {/* === LIST SECTION === */}
+        <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={styles.itemsGrid}>
+            {filteredData.map((guide, idx) => (
+              <TouchableOpacity
+                key={guide.pns_id + "_grid"}
+                style={[
+                  styles.itemCard,
+                  idx === selectedIdx && styles.selectedItemCard,
+                ]}
+                onPress={() => setSelectedIdx(idx)}
+              >
+                <Image
+                  source={getProductImage(guide)}
+                  style={styles.itemImage}
+                />
+                <Text style={styles.itemName}>
+                  {guide.product_and_services?.name || "Unknown"}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-          <View style={styles.itemCard}>
-            <Image
-              source={require("./assets/image.png")}
-              style={styles.itemImage}
-            />
-            <Text style={styles.itemName}>Eggplant</Text>
-          </View>
-          <View style={styles.itemCard}>
-            <Image
-              source={require("./assets/image.png")}
-              style={styles.itemImage}
-            />
-            <Text style={styles.itemName}>Banana</Text>
-          </View>
-          {/* add more items... */}
-        </View>
-      </ScrollView>
+        </ScrollView>
       </View>
     </>
   );
@@ -263,6 +348,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: "center",
+    textTransform: "capitalize",
   },
   guideImage: {
     width: 90,
@@ -275,6 +361,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     color: "#0766AD",
+    textTransform: "capitalize",
   },
   tip: {
     fontSize: 20,
@@ -285,7 +372,9 @@ const styles = StyleSheet.create({
   itemsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    columnGap: 22,
+    textTransform: "capitalize",
+    maxWidth: "500px",
   },
   itemCard: {
     width: "30%", // 3 per row
@@ -303,5 +392,104 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
     color: "#333",
+  },
+  previewCard: {
+    display: "flex",
+    backgroundColor: "#f9f9f9",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    marginBottom: 24,
+    elevation: 2,
+  },
+  previewCardRow: {
+    flexDirection: "row",
+    backgroundColor: "#f9f9f9",
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "flex-start",
+    marginBottom: 24,
+    elevation: 2,
+    gap: 32,
+  },
+  previewImageCol: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  previewDetailsCol: {
+    flex: 2,
+    justifyContent: "flex-start",
+  },
+  previewImage: {
+    width: 120,
+    height: 120,
+    resizeMode: "contain",
+  },
+  previewName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#0766AD",
+    textAlign: "center",
+    textTransform: "capitalize",
+  },
+  qualitySection: {
+    marginBottom: 12,
+    width: "100%",
+  },
+  qualityTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1976D2",
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  qualityDesc: {
+    fontSize: 15,
+    color: "#222",
+    marginLeft: 8,
+    marginBottom: 2,
+  },
+  qualityImagesRow: {
+    flexDirection: "row",
+    marginTop: 8,
+  },
+  qualityImage: {
+    width: 80,
+    height: 80,
+    resizeMode: "cover",
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  selectedItemCard: {
+    borderColor: "#0766AD",
+    borderWidth: 2,
+    borderRadius: 10,
+  },
+  tabsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 16,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  activeTabButton: {
+    backgroundColor: "#0766AD",
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0766AD",
+  },
+  activeTabButtonText: {
+    color: "#fff",
+  },
+  tabContent: {
+    width: "100%",
   },
 });
