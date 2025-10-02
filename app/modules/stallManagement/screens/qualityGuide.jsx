@@ -9,19 +9,29 @@ import {
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
+import QualityGuideLayout from "../components/qualityGuideLayout";
+import { supabase } from "../../../../backend/supabaseClient";
 
 export default function QualityGuidePage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState("quality-guide");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showProductSubmenu, setShowProductSubmenu] = useState(true); // Start with submenu open since we're in Product/Services
-
+  const [products, setProducts] = useState([]);
+  const [showModal, setShowModal] = useState(false);
   const { logout } = useAuth();
 
-  // No products available in this example
-  const products = [];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from("product_and_services")
+        .select("pns_id, name, pns_image, pns_category, type")
+        .eq("type", "product");
+      if (!error) setProducts(data || []);
+    };
+    fetchProducts();
+  }, []);
 
   // Function to handle sidebar hover
   const expandSidebar = () => {
@@ -43,20 +53,6 @@ export default function QualityGuidePage() {
   const handleLogout = () => {
     logout();
     router.replace("/screens/loginScreen");
-  };
-
-  const handleAddEntry = () => {
-    console.log("Adding new entry");
-    // Add logic to create new entry
-  };
-
-  const handleSearch = text => {
-    setSearchTerm(text);
-    // Add search logic here
-  };
-
-  const handleChangePage = page => {
-    setCurrentPage(page);
   };
 
   // Render the sidebar menu
@@ -214,118 +210,15 @@ export default function QualityGuidePage() {
         <View style={styles.contentSection}>
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>Products</Text>
-
-            <View style={styles.searchSection}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search a product"
-                value={searchTerm}
-                onChangeText={handleSearch}
-              />
-              <TouchableOpacity style={styles.searchButton}>
-                <Image
-                  source={require("../../../assets/search.png")}
-                  style={styles.logoImage}
-                />
-              </TouchableOpacity>
-            </View>
           </View>
 
-          <TouchableOpacity style={styles.addButton} onPress={handleAddEntry}>
-            <Text style={styles.addButtonIcon}>+</Text>
-            <Text style={styles.addButtonText}>Add new entry</Text>
-          </TouchableOpacity>
-
-          <View style={styles.productsList}>
-            {products.length > 0 ? (
-              products.map((product, index) => (
-                <View key={index} style={styles.productItem}>
-                  <Text>{product.name}</Text>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  No quality guide available
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.pagination}>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(1)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.activePageButtonText,
-                ]}
-              >
-                1
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 2 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(2)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 2 && styles.activePageButtonText,
-                ]}
-              >
-                2
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 3 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(3)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 3 && styles.activePageButtonText,
-                ]}
-              >
-                3
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.pageButton,
-                currentPage === 4 && styles.activePageButton,
-              ]}
-              onPress={() => handleChangePage(4)}
-            >
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 4 && styles.activePageButtonText,
-                ]}
-              >
-                4
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={() => {
-                currentPage < 4 && handleChangePage(currentPage + 1);
-              }}
-            >
-              <Text style={styles.nextButtonText}>Next</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Quality Guide Layout */}
+          <QualityGuideLayout
+            visible={showModal}
+            products={products}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+          />
         </View>
       </View>
     </View>
@@ -423,40 +316,6 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: "#999",
     fontSize: 16,
-  },
-  pagination: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-    paddingBottom: 20,
-  },
-  pageButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#e0e0e0",
-    marginHorizontal: 4,
-    borderRadius: 4,
-  },
-  activePageButton: {
-    backgroundColor: "#5c9a6c",
-  },
-  pageButtonText: {
-    color: "#333",
-  },
-  activePageButtonText: {
-    color: "#fff",
-  },
-  nextButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-  },
-  nextButtonText: {
-    color: "#333",
-    fontWeight: "500",
   },
   logoImage: {
     width: 24,
