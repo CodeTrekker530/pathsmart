@@ -66,8 +66,7 @@ export default function LoginPage() {
         );
         return;
       }
-      const passwordMatch = password === data.password;
-      // const passwordMatch = await bcrypt.compare(password, data.password);
+      const passwordMatch = await bcrypt.compare(password, data.password);
       if (passwordMatch) {
         login({ ...data, userType });
       } else {
