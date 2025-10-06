@@ -5,8 +5,8 @@ export async function fetchProductAndServices(searchTerm = '') {
 
   // Fetch matching products/services
   const { data: products, error: productError } = await supabase
-    .from('ProductandServices')
-    .select('PnS_id, name, category')
+    .from('product_and_services')
+    .select('pns_id, name, pns_category')
     .ilike('name', `%${searchLower}%`);
 
   if (productError) {
@@ -20,12 +20,12 @@ export async function fetchProductAndServices(searchTerm = '') {
   const { data: listings, error: listingError } = await supabase
     .from('listing')
     .select(`
-      PnS_id,
-      Stall (
+      pns_id,
+      stall (
         node_id
       )
     `)
-    .in('PnS_id', pnsIds);
+    .in('pns_id', pnsIds);
 
   if (listingError) {
     console.error('Supabase Listing fetch error:', listingError.message);
@@ -50,7 +50,7 @@ export async function fetchProductAndServices(searchTerm = '') {
 
   // Fetch filtered stalls
   const { data: stalls, error: stallError } = await supabase
-    .from('Stall')
+    .from('stall')
     .select('stall_id, stall_name, stall_category, node_id')
     .ilike('stall_name', `%${searchLower}%`);
 

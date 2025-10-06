@@ -22,24 +22,23 @@ const window = Dimensions.get('window');
 const drawerHeight = window.height * 0.6;
 
 export default function HomeScreen() {
-const { selectedItem } = useSelection();
-console.log('[Map.js] selectedItem:', selectedItem);
-const router = useRouter();
-const initialDrawerOffset = window.height - 150;
-const panY = useRef(new Animated.Value(initialDrawerOffset)).current;
+  const { selectedItem } = useSelection();
+  console.log('[Map.js] selectedItem:', selectedItem);
+  const router = useRouter();
+  const initialDrawerOffset = window.height - 150;
+  const panY = useRef(new Animated.Value(initialDrawerOffset)).current;
 
-const resetPositionAnim = Animated.timing(panY, {
-  toValue: window.height - drawerHeight,
-  duration: 300,
-  useNativeDriver: false,
-});
+  const resetPositionAnim = Animated.timing(panY, {
+    toValue: window.height - drawerHeight,
+    duration: 300,
+    useNativeDriver: false,
+  });
 
-const closeAnim = Animated.timing(panY, {
-  toValue: initialDrawerOffset,
-  duration: 300,
-  useNativeDriver: false,
-});
-
+  const closeAnim = Animated.timing(panY, {
+    toValue: initialDrawerOffset,
+    duration: 300,
+    useNativeDriver: false,
+  });
 
   const panResponder = useRef(
     PanResponder.create({
@@ -61,9 +60,8 @@ const closeAnim = Animated.timing(panY, {
   ).current;
 
   return (
-    <View 
-    >
-      {/* Top HUD (stays at top, same gradient) */}
+    <View>
+      {/* Top HUD */}
       <LinearGradient
         colors={["#0766AD", "#BCE2BD"]}
         start={{ x: 0, y: 0 }}
@@ -72,51 +70,86 @@ const closeAnim = Animated.timing(panY, {
       >
         {/* Logo */}
         <Image
-          source={require("./assets/logo.png")} // replace with your logo path
+          source={require("./assets/logo.png")}
           style={styles.logo}
         />
         <Text style={styles.logo_name}>PathSmart</Text>
-
-      <SearchBar />  {/* reused here */}
-
-
-        <TouchableOpacity style={styles.loginButton}
+        <SearchBar />
+        <TouchableOpacity 
+          style={styles.loginButton}
           onPress={() => { router.push("/screens/loginScreen"); }}>
           <Text style={{ fontWeight: "600", color: "#0766AD" }}>Login</Text>
         </TouchableOpacity>
       </LinearGradient>
-    <View style={styles.container}>
-
-      {/* Floating vertical button group */}
-      <View style={styles.floatingButtons}>
-        <TouchableOpacity style={styles.floatingButton}>
-          <Text style={styles.buttonNumber}>1</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.floatingButton}>
-          <Text style={styles.buttonNumber}>2</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.floatingButton}>
-          <Text style={styles.buttonNumber}>3</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Zoomable, scrollable image */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={{ flexGrow: 1 }}
-        maximumZoomScale={4}
-        minimumZoomScale={1}
-        bounces={false}
-        pinchGestureEnabled={true}
-        horizontal
-        showsVerticalScrollIndicator={false}
-        >
-        <View style={styles.mapContainer}>
-          <MapSVG width={window.width * 3} height={window.height * 3} />
+      
+      {/* Map & Buttons Wrapper */}
+      <View style={customStyles.mapWrapper}>
+        {/* Floating vertical button group */}
+        <View style={customStyles.floatingButtons}>
+          <TouchableOpacity style={customStyles.floatingButton}>
+            <Text style={customStyles.buttonNumber}>1</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={customStyles.floatingButton}>
+            <Text style={customStyles.buttonNumber}>2</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={customStyles.floatingButton}>
+            <Text style={customStyles.buttonNumber}>3</Text>
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+      
+        {/* Zoomable, scrollable map */}
+        <ScrollView
+          style={customStyles.scrollView}
+          contentContainerStyle={{ flexGrow: 1 }}
+          maximumZoomScale={4}
+          minimumZoomScale={1}
+          bounces={false}
+          pinchGestureEnabled={true}
+          horizontal
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.mapContainer}>
+            <MapSVG width={window.width * 3} height={window.height * 3} />
+          </View>
+        </ScrollView>
+      </View>
     </View>
-  </View>
-
   );
 }
+
+const customStyles = {
+  mapWrapper: {
+    margin: 20,
+    borderWidth: 1,
+    borderColor: 'black',
+    borderRadius: 10,
+    overflow: 'hidden', // to clip content to the rounded corners
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: window.height * 0.7,
+  },
+  floatingButtons: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 2,
+  },
+  floatingButton: {
+    backgroundColor: '#fff',
+    borderRadius: 30,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    elevation: 4,
+  },
+  buttonNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  scrollView: {
+    width: '100%',
+    height: '100%',
+  },
+};
