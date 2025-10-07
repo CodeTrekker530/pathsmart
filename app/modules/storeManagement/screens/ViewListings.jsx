@@ -1,28 +1,61 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Image, Modal, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSelection } from '../../../context/SelectionContext';
+import { useAuth } from '../../../context/AuthContext';
+import Sidebar from '../components/Sidebar';
+
+const ICON_SIZE = 28;
 
 export default function ViewListings() {
   const router = useRouter();
-  const { listings, removeListing, updateListing } = useSelection();
+  const params = useLocalSearchParams();
+  const currentId = params.id || 'vegetable1';
+  const { listings, removeListing, updateListing, setCurrentBusinessId } = useSelection();
+  React.useEffect(() => {
+    setCurrentBusinessId(currentId);
+  }, [currentId, setCurrentBusinessId]);
+  const { logout } = useAuth();
 
   // Modal state
   const [showCategoryModal, setShowCategoryModal] = React.useState(false);
+  const [searchText, setSearchText] = React.useState('');
+  const [selectedCategories, setSelectedCategories] = React.useState([]);
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [editingIndex, setEditingIndex] = React.useState(null);
   const [editingName, setEditingName] = React.useState('');
   const [editingPrice, setEditingPrice] = React.useState('');
   const [editingAvailability, setEditingAvailability] = React.useState('Available');
 
-  const handleBack = () => {
-    router.back();
+  // Allow numeric with a single decimal point
+  const cleanDecimal = (val) => {
+    if (!val) return '';
+    let s = String(val).replace(/[^0-9.]/g, '');
+    // If starts with dot, prefix 0
+    if (s.startsWith('.')) s = '0' + s;
+    const parts = s.split('.');
+    // Keep only first dot
+    const integer = parts[0];
+    const fraction = parts.length > 1 ? parts.slice(1).join('').replace(/\./g, '') : '';
+    return fraction.length > 0 ? `${integer}.${fraction}` : integer;
   };
 
-  const handleAddListings = () => {
-    router.push('/modules/storeManagement/screens/AddListings');
-  };
+  const handleBack = () => router.back();
+  const handleAddListings = () =>
+    router.push({
+      pathname: '/modules/storeManagement/screens/AddListings',
+      params: { id: currentId },
+    });
 
   const handleEdit = (index) => {
     const listing = listings[index];
@@ -35,18 +68,15 @@ export default function ViewListings() {
 
   const saveEdit = () => {
     if (editingIndex !== null) {
-      const updatedListing = { 
-        ...listings[editingIndex], 
+      const cleanPrice = cleanDecimal(editingPrice || '');
+      const updatedListing = {
+        ...listings[editingIndex],
         name: editingName,
-        price: editingPrice,
-        availability: editingAvailability
+        price: cleanPrice,
+        availability: editingAvailability,
       };
       updateListing(editingIndex, updatedListing);
-      setEditModalVisible(false);
-      setEditingIndex(null);
-      setEditingName('');
-      setEditingPrice('');
-      setEditingAvailability('Available');
+      cancelEdit();
     }
   };
 
@@ -58,18 +88,30 @@ export default function ViewListings() {
     setEditingAvailability('Available');
   };
 
+  const handleLogout = () => {
+    logout();
+    router.replace('/screens/loginScreen');
+  };
+
+  const isBarbershop = currentId === 'barbershop1';
+  const CATEGORY_SET = isBarbershop ? ['Hair'] : ['Vegetable','Meat','Fruit','Fish','Poultry','Grocery','Pasalubong'];
+  const toggleCategory = (c) => {
+    setSelectedCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+  };
+  const clearFilters = () => { setSearchText(''); setSelectedCategories([]); };
+
+  const filteredListings = listings.filter(l => {
+    const matchCat = selectedCategories.length === 0 || selectedCategories.includes(l.category);
+    const txt = searchText.trim().toLowerCase();
+    const matchTxt = txt === '' || l.name?.toLowerCase().includes(txt) || l.category?.toLowerCase().includes(txt);
+    return matchCat && matchTxt;
+  });
+
   return (
     <View style={styles.root}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.sidebarIcons}>
-          <Image source={require('../../../assets/logo.png')} style={[styles.sidebarIcon, {tintColor: undefined}]} />
-          <Image source={require('../../../assets/user-account.png')} style={styles.sidebarIcon} />
-          <TouchableOpacity onPress={() => router.replace('/screens/loginScreen')}>
-            <Image source={require('../../../assets/logout.png')} style={styles.sidebarIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Animated Sidebar (reused) */}
+      <Sidebar onAccountPress={() => { /* no-op on this page */ }} />
+
       {/* Main Content */}
       <View style={styles.main}>
         <View style={styles.headerRow}>
@@ -78,9 +120,16 @@ export default function ViewListings() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
+
         <View style={styles.searchFilterRow}>
           <View style={styles.searchInputContainer}>
-            <Text style={styles.searchInput}>Search listing</Text>
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Search listing"
+              placeholderTextColor="#666"
+              style={styles.realSearchInput}
+            />
             <Image source={require('../../../assets/search.png')} style={styles.searchIcon} />
           </View>
           <TouchableOpacity style={styles.filterRow} onPress={() => setShowCategoryModal(true)}>
@@ -88,39 +137,56 @@ export default function ViewListings() {
             <Text style={styles.filterText}>Filter by category</Text>
           </TouchableOpacity>
         </View>
+
         <View style={styles.listingsRow}>
-          {listings.length === 0 ? (
-            <View style={styles.centerContent}>
-              <Text style={styles.noListingsText}>No listings have been added yet. Please add a listing to get started.</Text>
-              <TouchableOpacity style={styles.addListingsButton} onPress={handleAddListings}>
-                <Text style={styles.addListingsButtonText}>Add Listings</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            listings.map((listing, idx) => (
-              <View key={idx} style={styles.card}>
-                <Image source={listing.image} style={styles.cardImage} />
-                <Text style={styles.cardName}>{listing.name}</Text>
-                <Text style={styles.cardCategory}>{listing.category}</Text>
-                {listing.price && <Text style={styles.cardPrice}>₱{listing.price}</Text>}
-                {listing.availability && (
-                  <Text style={[styles.cardAvailability, 
-                    listing.availability === 'Available' ? styles.available : styles.unavailable
-                  ]}>
-                    {listing.availability}
-                  </Text>
-                )}
-                <View style={styles.cardButtonRow}>
-                  <TouchableOpacity style={styles.removeButton} onPress={() => removeListing(idx)}>
-                    <Text style={styles.removeButtonText}>Remove</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(idx)}>
-                    <Text style={styles.editButtonText}>Edit</Text>
-                  </TouchableOpacity>
-                </View>
+            {filteredListings.length === 0 ? (
+              <View style={styles.centerContent}>
+                <Text style={styles.noListingsText}>No listings match your filters.</Text>
+                <TouchableOpacity
+                  style={styles.addListingsButton}
+                  onPress={handleAddListings}
+                >
+                  <Text style={styles.addListingsButtonText}>Add Listings</Text>
+                </TouchableOpacity>
               </View>
-            ))
-          )}
+            ) : (
+              filteredListings.map((listing, idx) => (
+                <View key={idx} style={styles.card}>
+                  <Image source={listing.image} style={styles.cardImage} />
+                  <Text style={styles.cardName}>{listing.name}</Text>
+                  <Text style={styles.cardCategory}>{listing.category}</Text>
+                  {listing.price && (
+                    <Text style={styles.cardPrice}>₱{listing.price}</Text>
+                  )}
+                  {listing.availability && (
+                    <Text
+                      style={[
+                        styles.cardAvailability,
+                        listing.availability === 'Available'
+                          ? styles.available
+                          : styles.unavailable,
+                      ]}
+                    >
+                      {listing.availability}
+                    </Text>
+                  )}
+                  <View style={styles.cardButtonRow}>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removeListing(idx)}
+                    >
+                      <Text style={styles.removeButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => handleEdit(idx)}
+                    >
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
         </View>
       </View>
 
@@ -131,38 +197,26 @@ export default function ViewListings() {
         animationType="fade"
         onRequestClose={() => setShowCategoryModal(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowCategoryModal(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowCategoryModal(false)}
+        >
           <View style={styles.categoryModalBox}>
             <Text style={styles.categoryModalTitle}>Filter by category</Text>
             <View style={styles.categoryGrid}>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Vegetable</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Meat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Fruit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Fish</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Poultry</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Hair</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Grocery</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.categoryButton}>
-                <Text style={styles.categoryButtonText}>Pasalubong</Text>
-              </TouchableOpacity>
+              {CATEGORY_SET.map(c => {
+                const active = selectedCategories.includes(c);
+                return (
+                  <TouchableOpacity key={c} style={[styles.categoryButton, active && styles.categoryButtonActive]} onPress={() => toggleCategory(c)}>
+                    <Text style={[styles.categoryButtonText, active && styles.categoryButtonTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowCategoryModal(false)}>
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+            <View style={styles.filterActionsRow}>
+              <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}><Text style={styles.clearBtnText}>Clear</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.applyBtn} onPress={() => setShowCategoryModal(false)}><Text style={styles.applyBtnText}>Apply</Text></TouchableOpacity>
+            </View>
           </View>
         </Pressable>
       </Modal>
@@ -177,7 +231,7 @@ export default function ViewListings() {
         <View style={styles.editModalOverlay}>
           <View style={styles.editModalBox}>
             <Text style={styles.editModalTitle}>Edit Product</Text>
-            
+
             <Text style={styles.editLabel}>Product Name</Text>
             <TextInput
               style={styles.editInput}
@@ -185,36 +239,56 @@ export default function ViewListings() {
               onChangeText={setEditingName}
               placeholder="Enter product name"
             />
-            
+
             <Text style={styles.editLabel}>Price (₱)</Text>
             <TextInput
               style={styles.editInput}
               value={editingPrice}
-              onChangeText={setEditingPrice}
+              onChangeText={(txt) => setEditingPrice(cleanDecimal(txt))}
               placeholder="Enter price"
               keyboardType="numeric"
             />
-            
+
             <Text style={styles.editLabel}>Availability</Text>
             <View style={styles.availabilityContainer}>
-              <TouchableOpacity 
-                style={[styles.availabilityOption, editingAvailability === 'Available' && styles.selectedAvailability]}
+              <TouchableOpacity
+                style={[
+                  styles.availabilityOption,
+                  editingAvailability === 'Available' &&
+                    styles.selectedAvailability,
+                ]}
                 onPress={() => setEditingAvailability('Available')}
               >
-                <Text style={[styles.availabilityText, editingAvailability === 'Available' && styles.selectedAvailabilityText]}>
+                <Text
+                  style={[
+                    styles.availabilityText,
+                    editingAvailability === 'Available' &&
+                      styles.selectedAvailabilityText,
+                  ]}
+                >
                   Available
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.availabilityOption, editingAvailability === 'Not Available' && styles.selectedAvailability]}
+              <TouchableOpacity
+                style={[
+                  styles.availabilityOption,
+                  editingAvailability === 'Not Available' &&
+                    styles.selectedAvailability,
+                ]}
                 onPress={() => setEditingAvailability('Not Available')}
               >
-                <Text style={[styles.availabilityText, editingAvailability === 'Not Available' && styles.selectedAvailabilityText]}>
+                <Text
+                  style={[
+                    styles.availabilityText,
+                    editingAvailability === 'Not Available' &&
+                      styles.selectedAvailabilityText,
+                  ]}
+                >
                   Not Available
                 </Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.editModalButtons}>
               <TouchableOpacity style={styles.cancelButton} onPress={cancelEdit}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -236,26 +310,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#222',
   },
-  sidebar: {
-    width: 80,
-    backgroundColor: '#0B72B9',
-    borderLeftWidth: 3,
-    borderLeftColor: '#8B5CF6',
-    alignItems: 'center',
-    paddingTop: 32,
-    paddingBottom: 32,
-    justifyContent: 'flex-start',
-  },
-  sidebarIcons: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  },
-  sidebarIcon: {
-    width: 48,
-    height: 48,
-    marginVertical: 24,
-  },
+
+  /* Sidebar styles removed in favor of shared component */
+
+  /* Main */
   main: {
     flex: 1,
     backgroundColor: '#fff',
@@ -267,15 +325,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginLeft: 2,
   },
-  backButton: {
-    marginRight: 14,
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#222',
-  },
+  backButton: { marginRight: 14, padding: 4 },
+  headerTitle: { fontSize: 17, fontWeight: '600', color: '#222' },
+
   searchFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -288,16 +340,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     flex: 1,
     marginRight: 8,
+    position: 'relative',
   },
-  searchInput: {
-    fontSize: 15,
-    color: '#222',
-  },
-  searchIcon: {
-    position: 'absolute',
-    right: 16,
-    top: 8,
-  },
+  searchInput: { fontSize: 15, color: '#222' },
+  realSearchInput: { flex: 1, fontSize: 15, color: '#222' },
+  searchIcon: { position: 'absolute', right: 16, top: 10, width: 18, height: 18 },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,22 +353,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
-  filterIcon: {
-    width: 22,
-    height: 22,
-    marginRight: 6,
-    tintColor: '#222',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#333',
-  },
+  filterIcon: { width: 22, height: 22, marginRight: 6, tintColor: '#222' },
+  filterText: { fontSize: 14, color: '#333' },
+
   listingsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'flex-start',
     marginTop: 32,
-    marginLeft: 0,
   },
   card: {
     width: 200,
@@ -347,6 +386,12 @@ const styles = StyleSheet.create({
     color: '#222',
     alignSelf: 'flex-start',
   },
+  cardCategory: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
   cardPrice: {
     fontWeight: '600',
     fontSize: 15,
@@ -363,33 +408,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 4,
   },
-  available: {
-    backgroundColor: '#D4EDDA',
-    color: '#155724',
-  },
-  unavailable: {
-    backgroundColor: '#F8D7DA',
-    color: '#721C24',
-  },
-  cardNameInput: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 2,
-    color: '#222',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 4,
-    padding: 4,
-    backgroundColor: '#f9f9f9',
-    width: '100%',
-  },
-  cardCategory: {
-    color: '#888',
-    fontSize: 13,
-    marginBottom: 8,
-    alignSelf: 'flex-start',
-  },
+  available: { backgroundColor: '#D4EDDA', color: '#155724' },
+  unavailable: { backgroundColor: '#F8D7DA', color: '#721C24' },
+
   cardButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -426,20 +447,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  saveButton: {
-    backgroundColor: '#0066CC',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    flex: 1,
-    minWidth: 70,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+
   centerContent: {
     flex: 1,
     justifyContent: 'center',
@@ -447,22 +455,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 32,
   },
-  noListingsText: {
-    color: '#888',
-    fontSize: 16,
-    marginBottom: 16,
-  },
+  noListingsText: { color: '#888', fontSize: 16, marginBottom: 16 },
   addListingsButton: {
     backgroundColor: '#6BA06B',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 32,
   },
-  addListingsButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  addListingsButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+
+  /* Category Modal */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.18)',
@@ -513,6 +515,13 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     textAlign: 'center',
   },
+  categoryButtonActive: { backgroundColor: '#6BA06B' },
+  categoryButtonTextActive: { color: '#fff', fontWeight: '600' },
+  filterActionsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  clearBtn: { flex: 1, backgroundColor: '#f0f0f0', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  clearBtnText: { color: '#444', fontWeight: '600', fontSize: 15 },
+  applyBtn: { flex: 1, backgroundColor: '#6BA06B', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  applyBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   closeButton: {
     backgroundColor: '#888',
     borderRadius: 8,
@@ -527,19 +536,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
-  categoryModalContent: {
-    marginTop: 8,
-  },
-  categoryModalRow: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  categoryModalLabel: {
-    fontSize: 16,
-    color: '#222',
-    fontWeight: '400',
-  },
+
+  /* Edit Modal */
   editModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -580,11 +578,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#f9f9f9',
   },
-  availabilityContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
+  availabilityContainer: { flexDirection: 'row', gap: 12, marginTop: 8 },
   availabilityOption: {
     flex: 1,
     paddingVertical: 12,
@@ -599,19 +593,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#6BA06B',
     borderColor: '#6BA06B',
   },
-  availabilityText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-  },
-  selectedAvailabilityText: {
-    color: '#fff',
-  },
-  editModalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
+  availabilityText: { fontSize: 14, fontWeight: '500', color: '#666' },
+  selectedAvailabilityText: { color: '#fff' },
+  editModalButtons: { flexDirection: 'row', gap: 12, marginTop: 24 },
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
@@ -619,11 +603,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     alignItems: 'center',
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
+  cancelButtonText: { fontSize: 16, fontWeight: '600', color: '#666' },
   saveChangesButton: {
     flex: 1,
     paddingVertical: 12,
@@ -631,9 +611,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#6BA06B',
     alignItems: 'center',
   },
-  saveChangesButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
+  saveChangesButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
 });

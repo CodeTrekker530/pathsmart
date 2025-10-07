@@ -1,166 +1,204 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSelection } from '../../../context/SelectionContext';
+import { useAuth } from '../../../context/AuthContext';
+import Sidebar from '../components/Sidebar';
+
+const ICON_SIZE = 28;
 
 export default function AddListings() {
-  const [importModalVisible, setImportModalVisible] = React.useState(false);
-  const [modalVisible, setModalVisible] = React.useState(false);
+  const [categoryModalVisible, setCategoryModalVisible] = React.useState(false); // category filter modal
   const [successVisible, setSuccessVisible] = React.useState(false);
-  const router = useRouter();
-  const { addListing } = useSelection();
-  // Sample listings data
-  const listings = [
-    {
-      name: 'Banana',
-      category: 'Fruit',
-      image: require('../../../assets/banana.png'),
-    },
-    {
-      name: 'Baguio beans',
-      category: 'Vegetables',
-      image: require('../../../assets/baguio_beans.png'),
-    },
-  ];
+  const [successSummary, setSuccessSummary] = React.useState({ addedCount: 0, skippedCount: 0 });
+  const [selectedKeys, setSelectedKeys] = React.useState(new Set());
 
-  const handleAdd = (listing) => {
-    // Add the listing to the context
-    addListing(listing);
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const currentId = params.id || 'vegetable1';
+  const isBarbershop = currentId === 'barbershop1';
+  const [searchText, setSearchText] = React.useState('');
+  const [selectedCategories, setSelectedCategories] = React.useState([]); // chosen categories
+
+  const { addListing, addListingsBulk, listings, setCurrentBusinessId } = useSelection();
+  React.useEffect(() => {
+    setCurrentBusinessId(currentId);
+  }, [currentId, setCurrentBusinessId]);
+  const { logout } = useAuth();
+
+  // Unified listing templates; choose based on business type
+  const templates = isBarbershop
+    ? [
+        { name: 'Haircut', category: 'Hair', image: require('../../../assets/haircut.png') },
+        { name: 'Hair color', category: 'Hair', image: require('../../../assets/haircolor.png') },
+      ]
+    : [
+        { name: 'Banana', category: 'Fruit', image: require('../../../assets/banana.png') },
+        { name: 'Baguio beans', category: 'Vegetable', image: require('../../../assets/baguio_beans.png') },
+      ];
+  
+  const CATEGORY_SET = isBarbershop ? ['Hair'] : ['Vegetable', 'Meat', 'Fruit', 'Fish', 'Poultry', 'Grocery', 'Pasalubong'];
+
+  const toggleCategory = (c) => {
+    setSelectedCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+  };
+  const clearFilters = () => { setSearchText(''); setSelectedCategories([]); };
+
+  const filteredTemplates = templates.filter(t => {
+    const matchCat = selectedCategories.length === 0 || selectedCategories.includes(t.category);
+    const txt = searchText.trim().toLowerCase();
+    const matchTxt = txt === '' || t.name.toLowerCase().includes(txt) || t.category.toLowerCase().includes(txt);
+    return matchCat && matchTxt;
+  });
+  
+  // Selection helpers
+  const keyFor = (item) => `${item.name}__${item.category}`;
+  const existsInBusiness = (item) => listings.some(l => l.name === item.name && l.category === item.category);
+  const isSelected = (item) => selectedKeys.has(keyFor(item));
+  const toggleSelect = (item) => {
+    if (existsInBusiness(item)) return; // cannot select duplicates
+    setSelectedKeys(prev => {
+      const next = new Set(prev);
+      const k = keyFor(item);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedKeys(new Set());
+  const selectAllFiltered = () => {
+    const selectable = filteredTemplates.filter(t => !existsInBusiness(t));
+    setSelectedKeys(new Set(selectable.map(keyFor)));
+  };
+
+  const addSelected = () => {
+    if (selectedKeys.size === 0) return;
+    // Resolve selected items from full templates list to avoid filter dependency
+    const selectedList = templates.filter(t => selectedKeys.has(keyFor(t)) && !existsInBusiness(t));
+    const summary = addListingsBulk(selectedList);
+    setSuccessSummary({ addedCount: summary.addedCount, skippedCount: summary.skippedCount });
     setSuccessVisible(true);
+    clearSelection();
     setTimeout(() => {
       setSuccessVisible(false);
-      router.replace('/modules/storeManagement/screens/ViewListings');
+      router.replace({ pathname: '/modules/storeManagement/screens/ViewListings', params: { id: currentId } });
     }, 1200);
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.replace('/screens/loginScreen');
   };
 
   return (
     <View style={styles.root}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.sidebarIcons}>
-          <Image source={require('../../../assets/logo.png')} style={[styles.sidebarIcon, {tintColor: undefined}]} />
-          <Image source={require('../../../assets/user-account.png')} style={styles.sidebarIcon} />
-          <TouchableOpacity onPress={() => router.replace('/screens/loginScreen')}>
-            <Image source={require('../../../assets/logout.png')} style={styles.sidebarIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Animated Sidebar (reused) */}
+      <Sidebar onAccountPress={() => router.replace('/modules/storeManagement/screens/dashboard')} />
+
       {/* Main Content */}
       <View style={styles.main}>
         <View style={styles.headerContainer}>
           <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/modules/storeManagement/screens/ViewListings')}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() =>
+                router.replace({
+                  pathname: '/modules/storeManagement/screens/ManageBusiness',
+                  params: { id: currentId },
+                })
+              }
+            >
               <Feather name="arrow-left" size={22} color="#222" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Add Your Listings</Text>
           </View>
-          <Text style={styles.subtitle}>Search for products or services that you want to add to your listings. You can filter by category as well.</Text>
+          <Text style={styles.subtitle}>Search for products or services that you want to add. You can filter by category.</Text>
+        </View>
+
+        {/* Selection Bar */}
+        <View style={styles.selectionBar}>
+          <Text style={styles.selectionText}>{selectedKeys.size} selected</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity style={[styles.selectionBtn, selectedKeys.size === 0 && styles.selectionBtnDisabled]} disabled={selectedKeys.size === 0} onPress={addSelected}>
+              <Text style={[styles.selectionBtnText, selectedKeys.size === 0 && styles.selectionBtnTextDisabled]}>Add Selected</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={selectAllFiltered}>
+              <Text style={styles.secondaryBtnText}>Select All (filtered)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={clearSelection}>
+              <Text style={styles.secondaryBtnText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.searchFilterRow}>
           <View style={styles.searchInputContainer}>
-            <Text style={styles.searchInput}>Search a listing</Text>
+            <TextInput value={searchText} onChangeText={setSearchText} placeholder="Search a listing" placeholderTextColor="#666" style={styles.searchTextInput} />
             <Image source={require('../../../assets/search.png')} style={styles.searchIcon} />
           </View>
-          <TouchableOpacity style={styles.filterRow} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity style={styles.filterRow} onPress={() => setCategoryModalVisible(true)}>
             <Image source={require('../../../assets/filter-menu.png')} style={styles.filterIcon} />
             <Text style={styles.filterText}>Filter by category</Text>
           </TouchableOpacity>
         </View>
-        {/* Import Listings Row */}
-        <TouchableOpacity style={styles.importRow} onPress={() => setImportModalVisible(true)}>
-          <Text style={styles.importText}>Import listings</Text>
-          <Image source={require('../../../assets/import.png')} style={styles.importIcon} />
-        </TouchableOpacity>
-        {/* Import Modal */}
-        <Modal
-          visible={importModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setImportModalVisible(false)}
-        >
-          <View style={styles.importModalOverlay}>
-            <View style={styles.importModalContainer}>
-              <Text style={styles.importModalText}>
-                Drag and drop your <Text style={{fontWeight:'bold'}}> .txt file </Text> here
-              </Text>
-              <Text style={styles.importModalOr}>or</Text>
-              <TouchableOpacity style={styles.importModalButton}>
-                <Text style={styles.importModalButtonText}>Choose File</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.importModalClose} onPress={() => setImportModalVisible(false)}>
-                <Text style={styles.importModalCloseText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+
+        {/* Import flow removed: selection handles batch add */}
+
         {/* Category Modal */}
-        <Modal
-          visible={modalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}
-        >
+        <Modal visible={categoryModalVisible} transparent animationType="fade" onRequestClose={() => setCategoryModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.categoryModalBox}>
               <Text style={styles.categoryModalTitle}>Filter by category</Text>
-              <View style={styles.categoryGrid}>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Vegetable</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Meat</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Fruit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Fish</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Poultry</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Hair</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Grocery</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.categoryButton}>
-                  <Text style={styles.categoryButtonText}>Pasalubong</Text>
-                </TouchableOpacity>
+              <ScrollView style={{ maxHeight: 320 }}>
+                <View style={styles.categoryGrid}>
+                  {CATEGORY_SET.map(c => {
+                    const active = selectedCategories.includes(c);
+                    return (
+                      <TouchableOpacity key={c} style={[styles.categoryButton, active && styles.categoryButtonActive]} onPress={() => toggleCategory(c)}>
+                        <Text style={[styles.categoryButtonText, active && styles.categoryButtonTextActive]}>{c}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+              <View style={styles.filterActionsRow}>
+                <TouchableOpacity style={styles.clearBtn} onPress={clearFilters}><Text style={styles.clearBtnText}>Clear</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.applyBtn} onPress={() => setCategoryModalVisible(false)}><Text style={styles.applyBtnText}>Apply</Text></TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.closeButtonText}>Close</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </Modal>
+
         {/* Listings */}
         <View style={styles.listingsRow}>
-          {listings.map((listing, idx) => (
-            <View key={idx} style={styles.card}>
-              <Image source={listing.image} style={styles.cardImage} />
-              <Text style={styles.cardName}>{listing.name}</Text>
-              <Text style={styles.cardCategory}>{listing.category}</Text>
-              <TouchableOpacity style={styles.cardButton} onPress={() => handleAdd(listing)}>
-                <Text style={styles.cardButtonText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+          {filteredTemplates.length === 0 ? (
+            <Text style={{ color: '#666', fontSize: 15 }}>No templates match your filters.</Text>
+          ) : (
+            filteredTemplates.map((item, idx) => {
+              const exists = existsInBusiness(item);
+              const selected = isSelected(item);
+              return (
+                <TouchableOpacity key={idx} style={[styles.card, selected && styles.cardSelected, exists && styles.cardDisabled]} onPress={() => toggleSelect(item)} activeOpacity={exists ? 1 : 0.8} disabled={exists}>
+                  <Image source={item.image} style={styles.cardImage} />
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.cardName}>{item.name}</Text>
+                    <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
+                      {selected && <Text style={styles.checkboxTick}>✓</Text>}
+                    </View>
+                  </View>
+                  <Text style={styles.cardCategory}>{item.category}</Text>
+                  {exists && <Text style={styles.cardBadge}>Already added</Text>}
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
+
         {/* Success Note */}
         {successVisible && (
           <View style={styles.successNoteBox}>
-            <TouchableOpacity style={styles.successManageBtn} onPress={() => {
-              setSuccessVisible(false);
-              router.replace('/modules/storeManagement/screens/ViewListings');
-            }}>
-              <Text style={styles.successManageBtnText}>View Your Listings</Text>
-            </TouchableOpacity>
             <View style={styles.successRow}>
-              <Text style={styles.successIcon}>✓</Text>
-              <Text style={styles.successText}><Text style={{fontWeight:'bold'}}>Success:</Text> Listing successfully added.</Text>
+              <Text style={styles.successIcon}>ℹ</Text>
+              <Text style={styles.successText}>Added {successSummary.addedCount} item(s); {successSummary.skippedCount} already existed.</Text>
             </View>
           </View>
         )}
@@ -170,61 +208,8 @@ export default function AddListings() {
 }
 
 const styles = StyleSheet.create({
-  importModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  importModalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#D1E7DD',
-    padding: 32,
-    width: 350,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  importModalText: {
-    fontSize: 16,
-    color: '#222',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  importModalOr: {
-    fontSize: 15,
-    color: '#888',
-    marginBottom: 12,
-  },
-  importModalButton: {
-    backgroundColor: '#6BA06B',
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 32,
-    marginBottom: 12,
-  },
-  importModalButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  importModalClose: {
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 58,
-    marginBottom: 12,
-    backgroundColor: '#eee',
-    
-  },
-  importModalCloseText: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
+  // Import modal styles removed
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.18)',
@@ -268,13 +253,18 @@ const styles = StyleSheet.create({
     minHeight: 45,
     justifyContent: 'center',
     width: '48%',
+    borderWidth: 1,
+    borderColor: '#eee'
   },
-  categoryButtonText: {
-    fontSize: 16,
-    color: '#222',
-    fontWeight: '400',
-    textAlign: 'center',
-  },
+  categoryButtonText: { fontSize: 16, color: '#222', fontWeight: '400', textAlign: 'center' },
+  categoryButtonActive: { backgroundColor: '#6BA06B', borderColor: '#6BA06B' },
+  categoryButtonTextActive: { color: '#fff', fontWeight: '600' },
+  filterActionsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  clearBtn: { flex: 1, backgroundColor: '#f0f0f0', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  clearBtnText: { color: '#444', fontWeight: '600', fontSize: 15 },
+  applyBtn: { flex: 1, backgroundColor: '#6BA06B', paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  applyBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  categoryButtonText: { fontSize: 16, color: '#222', fontWeight: '400', textAlign: 'center' },
   closeButton: {
     backgroundColor: '#888',
     borderRadius: 8,
@@ -283,56 +273,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     minWidth: 100,
   },
-  closeButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  root: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-  },
-  sidebar: {
-    width: 80,
-    backgroundColor: '#0B72B9',
-    borderLeftWidth: 3,
-    borderLeftColor: '#8B5CF6',
-    alignItems: 'center',
-    paddingTop: 32,
-    paddingBottom: 32,
-    justifyContent: 'flex-start',
-  },
-  sidebarIcons: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  },
-  sidebarIcon: {
-    width: 48,
-    height: 48,
-    marginVertical: 24,
-  },
-  main: {
-    flex: 1,
-    padding: 40,
-    backgroundColor: '#fff',
-  },
-  headerContainer: {
-    marginBottom: 18,
-    alignItems: 'flex-start',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-    marginTop: 8,
-    gap: 8,
-  },
-  backButton: {
-    marginRight: 8,
-  },
+  closeButtonText: { color: '#fff', fontWeight: '600', fontSize: 16, textAlign: 'center' },
+
+  root: { flex: 1, flexDirection: 'row', backgroundColor: '#222' },
+
+  main: { flex: 1, padding: 40, backgroundColor: '#fff' },
+  headerContainer: { marginBottom: 18, alignItems: 'flex-start' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, marginTop: 8, gap: 8 },
+  backButton: { marginRight: 8 },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -341,77 +289,45 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textTransform: 'capitalize',
   },
-  subtitle: {
-    fontSize: 15,
-    color: '#888',
-    marginTop: 2,
-    fontWeight: '400',
-    letterSpacing: 0.1,
-  },
-  searchFilterRow: {
+  subtitle: { fontSize: 15, color: '#888', marginTop: 2, fontWeight: '400', letterSpacing: 0.1 },
+
+  selectionBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
-  },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F0DF',
-    borderRadius: 6,
-    paddingHorizontal: 16,
     paddingVertical: 8,
-    flex: 1,
-    marginRight: 18,
   },
-  searchInput: {
-    color: '#666',
-    fontSize: 15,
-    flex: 1,
+  selectionText: { color: '#222', fontSize: 14 },
+  selectionBtn: {
+    backgroundColor: '#6BA06B',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
-  searchIcon: {
-    width: 20,
-    height: 20,
-    tintColor: '#6BA06B',
-    marginLeft: 8,
+  selectionBtnDisabled: { backgroundColor: '#ccc' },
+  selectionBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  selectionBtnTextDisabled: { color: '#555' },
+  secondaryBtn: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  filterIcon: {
-    width: 22,
-    height: 22,
-    marginRight: 6,
-    tintColor: '#222',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#222',
-  },
-  importRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-    marginTop: 8,
-  },
-  importText: {
-    fontSize: 18,
-    color: '#222',
-    marginRight: 8,
-    fontWeight: 'normal',
-    textDecorationLine: 'underline',
-  },
-  importIcon: {
-    width: 28,
-    height: 28,
-    tintColor: '#222',
-  },
-  listingsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-    marginTop: 12,
-  },
+  secondaryBtnText: { color: '#222', fontSize: 14, fontWeight: '500' },
+
+  searchFilterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  searchInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E3F0DF', borderRadius: 6, paddingHorizontal: 16, paddingVertical: 8, flex: 1, marginRight: 18 },
+  searchTextInput: { flex: 1, fontSize: 15, color: '#222' },
+  searchInput: { color: '#666', fontSize: 15, flex: 1 },
+  searchIcon: { width: 20, height: 20, tintColor: '#6BA06B', marginLeft: 8 },
+  filterRow: { flexDirection: 'row', alignItems: 'center' },
+  filterIcon: { width: 22, height: 22, marginRight: 6, tintColor: '#222' },
+  filterText: { fontSize: 14, color: '#222' },
+
+  // Import row removed
+
+  listingsRow: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'flex-start', marginTop: 12 },
   card: {
     width: 200,
     borderWidth: 1,
@@ -419,43 +335,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 32,
     padding: 12,
-    alignItems: 'center',
     backgroundColor: '#fff',
   },
-  cardImage: {
-    width: 160,
-    height: 100,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  cardName: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginBottom: 2,
-    color: '#222',
-    alignSelf: 'flex-start',
-  },
-  cardCategory: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 8,
-    alignSelf: 'flex-start',
-  },
-  cardButton: {
-    backgroundColor: '#6BA06B',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 24,
+  cardSelected: { borderColor: '#6BA06B', borderWidth: 2 },
+  cardDisabled: { opacity: 0.6 },
+  cardImage: { width: 160, height: 100, borderRadius: 6, marginBottom: 8 },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardName: { fontWeight: 'bold', fontSize: 16, marginBottom: 2, color: '#222' },
+  cardCategory: { fontSize: 13, color: '#888', marginBottom: 8, alignSelf: 'flex-start' },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#888',
     alignItems: 'center',
-    marginTop: 8,
-    width: '100%',
+    justifyContent: 'center',
   },
-  cardButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-    textAlign: 'center',
+  checkboxChecked: {
+    backgroundColor: '#6BA06B',
+    borderColor: '#6BA06B',
   },
+  checkboxTick: { color: '#fff', fontWeight: 'bold', fontSize: 14, lineHeight: 16 },
+  cardBadge: { alignSelf: 'flex-start', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, color: '#555', fontSize: 12 },
+
   successNoteBox: {
     position: 'absolute',
     right: 32,
@@ -470,32 +373,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  successManageBtn: {
-    backgroundColor: '#6BA06B',
-    borderRadius: 6,
-    alignSelf: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    marginBottom: 8,
-  },
-  successManageBtnText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  successRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  successIcon: {
-    color: '#198754',
-    fontWeight: 'bold',
-    fontSize: 22,
-    marginRight: 8,
-  },
-  successText: {
-    color: '#198754',
-    fontSize: 16,
-  },
+  successRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  successIcon: { color: '#198754', fontWeight: 'bold', fontSize: 22, marginRight: 8 },
+  successText: { color: '#198754', fontSize: 16 },
 });
