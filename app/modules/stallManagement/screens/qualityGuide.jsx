@@ -151,22 +151,6 @@ export default function QualityGuidePage() {
           </TouchableOpacity>
         </View>
       )}
-      <TouchableOpacity
-        style={[
-          styles.menuItem,
-          activeTab === "settings" && styles.activeMenuItem,
-        ]}
-        onPress={() => {
-          setActiveTab("settings");
-          router.push("/modules/stallManagement/screens/stall");
-        }}
-      >
-        <Image
-          source={require("../../../assets/stall.png")}
-          style={styles.logoImage}
-        />
-        {sidebarExpanded && <Text style={styles.menuText}>Stalls</Text>}
-      </TouchableOpacity>
       <View style={styles.sidebarBottom}>
         <TouchableOpacity
           style={[
