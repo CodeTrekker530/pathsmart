@@ -1,35 +1,55 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '../../../context/AuthContext';
+import Sidebar from '../components/Sidebar';
+import { businesses } from './businessData';
+import { useSelection } from '../../../context/SelectionContext';
+
+const SIDEBAR_WIDTH_COLLAPSED = 60;
+const SIDEBAR_WIDTH_EXPANDED = 220;
+const ICON_SIZE = 24;
 
 export default function ManageBusiness() {
   const router = useRouter();
+  const { logout } = useAuth();
+  const params = useLocalSearchParams();
+  const id = params.id || 'vegetable1';
+  const business = businesses[id] || null;
+  const { setCurrentBusinessId } = useSelection();
+  React.useEffect(() => {
+    setCurrentBusinessId(id);
+  }, [id, setCurrentBusinessId]);
 
   const handleBack = () => {
     router.back();
   };
 
   const handleAddListing = () => {
-    router.push('/modules/storeManagement/screens/AddListings');
+    router.push({
+      pathname: '/modules/storeManagement/screens/AddListings',
+      params: { id },
+    });
   };
 
   const handleViewListings = () => {
-    router.push('/ViewListings');
+    router.push({
+      pathname: '/modules/storeManagement/screens/ViewListings',
+      params: { id },
+    });
+  };
+
+  const handleLogout = () => {
+    logout();
+    router.replace('/screens/loginScreen');
   };
 
   return (
     <View style={styles.root}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.sidebarIcons}>
-          <Image source={require('../../../assets/logo.png')} style={[styles.sidebarIcon, {tintColor: undefined}]} />
-          <Image source={require('../../../assets/user-account.png')} style={styles.sidebarIcon} />
-          <TouchableOpacity onPress={() => router.replace('/screens/loginScreen')}>
-            <Image source={require('../../../assets/logout.png')} style={styles.sidebarIcon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Animated Sidebar (reused) */}
+      <Sidebar onAccountPress={() => { /* placeholder: could open account modal */ }} />
+
       {/* Main Content */}
       <View style={styles.main}>
         <View style={styles.headerRow}>
@@ -38,32 +58,34 @@ export default function ManageBusiness() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
+
         <View style={styles.centerContent}>
-          <View style={styles.card}>
-            <Image
-              source={require('../../../assets/vegetable.png')}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
-            <View style={styles.cardContent}>
-              <View style={styles.cardTextRow}>
-                <Text style={styles.cardTitle}>Abellano Store</Text>
-                <Text style={styles.cardType}>Vegetable</Text>
-              </View>
-              <Text style={styles.cardLocation}>Ground Floor, Vegetable Section</Text>
-              <Text style={styles.cardDetails}># Block 1, Stall 2</Text>
-              <View style={styles.cardActionsRow}>
-                <TouchableOpacity onPress={handleAddListing}>
-                  <Text style={styles.addListingLink}>Add your listings</Text>
+          {!business ? (
+            <Text style={{ color: '#222' }}>Business not found.</Text>
+          ) : (
+            <View style={styles.card}>
+              <Image source={business.image} style={styles.cardImage} resizeMode="cover" />
+              <View style={styles.cardContent}>
+                <View style={styles.cardTextRow}>
+                  <Text style={styles.cardTitle}>{business.name}</Text>
+                  <Text style={styles.cardType}>{business.category}</Text>
+                </View>
+                <Text style={styles.cardLocation}>{business.location}</Text>
+                <Text style={styles.cardDetails}>{business.stall}</Text>
+                <View style={styles.cardActionsRow}>
+                  <TouchableOpacity onPress={handleAddListing}>
+                    <Text style={styles.addListingLink}>Add your listings</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.viewListingsButton} onPress={handleViewListings}>
+                  <Feather name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.viewListingsButtonText}>View Listings</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.viewListingsButton} onPress={() => router.push('/modules/storeManagement/screens/ViewListings')}>
-                <Feather name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.viewListingsButtonText}>View Listings</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          )}
         </View>
+
       </View>
     </View>
   );
@@ -75,26 +97,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#222',
   },
-  sidebar: {
-    width: 80,
-    backgroundColor: '#0B72B9',
-    borderLeftWidth: 3,
-    borderLeftColor: '#8B5CF6',
-    alignItems: 'center',
-    paddingTop: 32,
-    paddingBottom: 32,
-    justifyContent: 'flex-start',
-  },
-  sidebarIcons: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  },
-  sidebarIcon: {
-    width: 48,
-    height: 48,
-    marginVertical: 24,
-  },
+
+  /* Main */
   main: {
     flex: 1,
     backgroundColor: '#fff',
@@ -115,11 +119,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#222',
   },
+
   centerContent: {
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },
+  /* Inlined card styles (previously in BusinessManageCard) */
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -139,9 +145,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    marginBottom: 0,
-    alignSelf: 'center',
-    overflow: 'hidden',
   },
   cardContent: {
     paddingHorizontal: 16,
@@ -196,8 +199,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 0,
-    marginTop: 0,
     width: '100%',
   },
   viewListingsButtonText: {
