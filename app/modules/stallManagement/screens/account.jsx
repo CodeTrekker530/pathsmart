@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Pressable,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
@@ -200,22 +201,6 @@ export default function Account() {
           </TouchableOpacity>
         </View>
       )}
-      <TouchableOpacity
-        style={[
-          styles.menuItem,
-          activeTab === "settings" && styles.activeMenuItem,
-        ]}
-        onPress={() => {
-          setActiveTab("settings");
-          router.push("/modules/stallManagement/screens/stall");
-        }}
-      >
-        <Image
-          source={require("../../../assets/stall.png")}
-          style={styles.logoImage}
-        />
-        {sidebarExpanded && <Text style={styles.menuText}>Stalls</Text>}
-      </TouchableOpacity>
       <View style={styles.sidebarBottom}>
         <TouchableOpacity
           style={[
