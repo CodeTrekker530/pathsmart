@@ -8,10 +8,12 @@ import {
   Modal,
   Pressable,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../../context/AuthContext";
 import Sidebar from "../components/Sidebar";
+import { supabase } from "../../../../backend/supabaseClient";
 
 const SIDEBAR_WIDTH_COLLAPSED = 60;
 const SIDEBAR_WIDTH_EXPANDED = 220;
@@ -19,7 +21,7 @@ const ICON_SIZE = 24;
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showChangeForm, setShowChangeForm] = useState(false);
@@ -27,14 +29,19 @@ export default function DashboardPage() {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   // account editable fields
-  const [fullName, setFullName] = useState("Joseph Frondozo Martin");
-  const [username, setUsername] = useState("username1");
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
 
   // change form fields
   const [phone, setPhone] = useState("");
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // owner and stalls data
+  const [stalls, setStalls] = useState([]);
+  const [loadingStalls, setLoadingStalls] = useState(true);
+  const [ownerName, setOwnerName] = useState("");
 
   // Sidebar animation functions
   const expandSidebar = () => setSidebarExpanded(true);
@@ -59,6 +66,126 @@ export default function DashboardPage() {
     setShowAccountModal(false);
   };
 
+  React.useEffect(() => {
+    let mounted = true;
+    async function loadOwnerAndStalls() {
+      setLoadingStalls(true);
+      try {
+        console.log("[Dashboard] auth user:", user);
+
+        if (!user) {
+          if (mounted) {
+            setOwnerName("");
+            setStalls([]);
+          }
+          return;
+        }
+
+        // set owner display name from available fields
+        const nameFromUser =
+          user.user_metadata?.full_name ||
+          user.full_name ||
+          user.username ||
+          user.name ||
+          (user.email ? user.email.split("@")[0] : null);
+        if (mounted) setOwnerName(nameFromUser || "");
+
+        let resolvedOwnerIds = [];
+
+        if (user?.stall_owner_id) resolvedOwnerIds.push(user.stall_owner_id);
+
+        if (user?.stall_owner_account_id) {
+          try {
+            const { data: ownerRow, error: ownerErr } = await supabase
+              .from("stall_owner")
+              .select("stall_owner_id")
+              .eq("stall_owner_account_id", user.stall_owner_account_id)
+              .maybeSingle();
+
+            if (!ownerErr && ownerRow && ownerRow.stall_owner_id) {
+              resolvedOwnerIds.push(ownerRow.stall_owner_id);
+              console.log(
+                "[Dashboard] mapped stall_owner_account_id -> stall_owner_id:",
+                user.stall_owner_account_id,
+                "=>",
+                ownerRow.stall_owner_id
+              );
+            } else if (ownerErr) {
+              console.warn(
+                "[Dashboard] error mapping stall_owner_account_id:",
+                user.stall_owner_account_id,
+                ownerErr
+              );
+            }
+          } catch (e) {
+            console.warn(
+              "[Dashboard] exception mapping stall_owner_account_id",
+              e
+            );
+          }
+        }
+
+        const previousCandidates = [
+          user.id,
+          user?.id ? Number(user.id) : undefined,
+          user?.user_metadata?.stall_owner_id,
+        ]
+          .filter(v => v !== undefined && v !== null)
+          .filter((v, i, a) => a.indexOf(v) === i);
+
+        resolvedOwnerIds = [
+          ...new Set([...resolvedOwnerIds, ...previousCandidates]),
+        ];
+
+        console.log("[Dashboard] final owner id candidates:", resolvedOwnerIds);
+
+        let stallData = null;
+        // Try each resolved ownerId against stall_owner_id
+        for (const ownerId of resolvedOwnerIds) {
+          const { data: sData, error: sErr } = await supabase
+            .from("stall")
+            .select(
+              "stall_id, stall_name, stall_category, stall_number, stall_section, node_id, block_number, stall_owner_id"
+            )
+            .eq("stall_owner_id", ownerId);
+
+          if (sErr) {
+            console.warn("[Dashboard] query error for ownerId", ownerId, sErr);
+            continue;
+          }
+          if (sData && sData.length > 0) {
+            stallData = sData;
+            console.log(
+              "[Dashboard] found stalls for stall_owner_id =",
+              ownerId,
+              sData
+            );
+            break;
+          }
+        }
+
+        if (!stallData) {
+          const { data: sample, error: sampleErr } = await supabase
+            .from("stall")
+            .select("stall_id, stall_name, stall_owner_id, node_id")
+            .limit(10);
+          console.log("[Dashboard] sample stall rows:", sample, sampleErr);
+        }
+
+        if (mounted) setStalls(stallData || []);
+      } catch (e) {
+        console.warn(e);
+        if (mounted) setStalls([]);
+      } finally {
+        if (mounted) setLoadingStalls(false);
+      }
+    }
+    loadOwnerAndStalls();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
   return (
     <View style={styles.root}>
       {/* Animated Sidebar (reused) */}
@@ -66,68 +193,54 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <View style={styles.main}>
-        <Text style={styles.header}>Welcome Abellano!</Text>
+        <Text style={styles.header}>Welcome {ownerName || "Owner"}!</Text>
         <Text style={styles.subheader}>Manage your business</Text>
         <View style={styles.divider} />
 
         <View style={styles.cardGrid}>
-          <View style={styles.card}>
-            <Image
-              source={require("../../../assets/barbershop.png")}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
-            <View style={styles.cardContent}>
-              <View style={styles.cardRow}>
-                <Text style={styles.cardTitle}>The Classic Cut</Text>
-                <Text style={styles.cardType}>Barbershop</Text>
+          {loadingStalls ? (
+            <ActivityIndicator size="small" color="#6BA06B" />
+          ) : stalls.length === 0 ? (
+            <Text style={{ color: "#666" }}>
+              No stalls found for your account.
+            </Text>
+          ) : (
+            stalls.map(stall => (
+              <View style={styles.card} key={stall.stall_id}>
+                {/* Use a small generic image per category; adjust mapping as needed */}
+                <Image
+                  source={
+                    stall.stall_category?.toLowerCase().includes("barber")
+                      ? require("../../../assets/barbershop.png")
+                      : require("../../../assets/vegetable.png")
+                  }
+                  style={styles.cardImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.cardContent}>
+                  <View style={styles.cardRow}>
+                    <Text style={styles.cardTitle}>{stall.stall_name}</Text>
+                    <Text style={styles.cardType}>{stall.stall_category}</Text>
+                  </View>
+                  <Text style={styles.cardLocation}>
+                    {stall.stall_section || "Section"}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.manageButton}
+                    onPress={() =>
+                      router.push({
+                        pathname:
+                          "/modules/storeManagement/screens/ManageBusiness",
+                        params: { id: String(stall.stall_id) },
+                      })
+                    }
+                  >
+                    <Text style={styles.manageButtonText}>Manage</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text style={styles.cardLocation}>
-                Ground Floor, Barbershop Section
-              </Text>
-              <TouchableOpacity
-                style={styles.manageButton}
-                onPress={() =>
-                  router.push({
-                    pathname:
-                      "/modules/storeManagement/screens/ManageBusiness",
-                    params: { id: "barbershop1" },
-                  })
-                }
-              >
-                <Text style={styles.manageButtonText}>Manage</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <Image
-              source={require("../../../assets/vegetable.png")}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
-            <View style={styles.cardContent}>
-              <View style={styles.cardRow}>
-                <Text style={styles.cardTitle}>Abellano Store</Text>
-                <Text style={styles.cardType}>Vegetable</Text>
-              </View>
-              <Text style={styles.cardLocation}>
-                Ground Floor, Vegetable Section
-              </Text>
-              <TouchableOpacity
-                style={styles.manageButton}
-                onPress={() =>
-                  router.push({
-                    pathname:
-                      "/modules/storeManagement/screens/ManageBusiness",
-                    params: { id: "vegetable1" },
-                  })
-                }
-              >
-                <Text style={styles.manageButtonText}>Manage</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            ))
+          )}
         </View>
       </View>
 
