@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Svg, Path, Rect, G, Line, Circle, Text } from 'react-native-svg';
 import { useSelection } from '../context/SelectionContext';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import nodesData from './f1nodes.json';
 
 
@@ -10,12 +10,14 @@ const HIGHLIGHT_COLOR = '#609966';
 const DEFAULT_COLOR = '#D9D9D9';
 const START_POINT_COLOR = '#ff0000ff';
 const SELECTED_START_COLOR = '#00ff00';
+const DESTINATION_COLOR = '#FFA500'; // Orange color for destination
 const START_POINT_RADIUS = 20;
 
 const MapSVG = () => {
   const { selectedItem } = useSelection();
-  const [startPoint, setStartPoint] = useState(null);
-  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [startNodeId, setStartNodeId] = useState(null);
+  const [endNodeId, setEndNodeId] = useState(null);
+  const [path, setPath] = useState([]);
   const nodes = nodesData.nodes;
 
   const selectedIds = Array.isArray(selectedItem?.node_id)
@@ -26,31 +28,78 @@ const MapSVG = () => {
 
   // Handler for when a start point is clicked
   const handleStartPointClick = (nodeId) => {
-    setStartPoint(nodeId === startPoint ? null : nodeId);
-    // You might want to store this in a context or pass it up to a parent component
-    console.log('Selected start point:', nodeId);
+    if (!startNodeId) {
+      // First click sets start node
+      setStartNodeId(nodeId);
+    } else if (!endNodeId) {
+      // Second click sets end node
+      setEndNodeId(nodeId);
+    } else {
+      // If both are set, reset and set new start
+      setStartNodeId(nodeId);
+      setEndNodeId(null);
+    }
   };
 
-  const PathLine = ({ from, to, nodes }) => {
+  // Effect to fetch path when start or end nodes change
+  useEffect(() => {
+    const fetchPath = async () => {
+      if (startNodeId && endNodeId) {
+        try {
+          const response = await fetch(`http://localhost:5000/findpath`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              start: startNodeId,
+              end: endNodeId
+            })
+          });
+          const data = await response.json();
+          setPath(data.path);
+        } catch (error) {
+          console.error('Error fetching path:', error);
+        }
+      }
+    };
+
+    fetchPath();
+  }, [startNodeId, endNodeId]);
+
+  const DestinationMarker = ({ x, y }) => (
+    <Circle
+      cx={x}
+      cy={y}
+      r={START_POINT_RADIUS}
+      fill={DESTINATION_COLOR}
+      opacity={0.7}
+    />
+  );
+
+  const PathLine = ({ from, to, nodes, isLastNode = false }) => {
     const start = nodes[from];
     const end = nodes[to];
 
     if (!start || !end) return null;
 
     return (
-      <Line
-        x1={start.x}
-        y1={start.y}
-        x2={end.x}
-        y2={end.y}
-        stroke= "#0059FF"
-        strokeWidth="6"
-      />
+      <G>
+        <Line
+          x1={start.x}
+          y1={start.y}
+          x2={end.x}
+          y2={end.y}
+          stroke="#0059FF"
+          strokeWidth="6"
+        />
+        {isLastNode && <DestinationMarker x={end.x} y={end.y} />}
+      </G>
     );
   };
 
   const StartPoint = ({ id, cx, cy, label }) => {
-    const isSelected = startPoint === id;
+    const isSelected = startNodeId === id;
 
     return (
       <G>
@@ -106,9 +155,6 @@ const MapSVG = () => {
       </G>
     );
   };
-
-  const path = [14, 20, 21, 22, 23, 25]; // from backend
-
 
   const getFill = (id) => {
     return selectedIds.includes(Number(id)) ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
@@ -219,17 +265,6 @@ const MapSVG = () => {
 <path id="56" d="M1446.5 344.5H1500.5L1496.5 368L1487.5 392.5L1477 412L1465.5 426.5L1454 436L1421 396.5L1434 381.5L1442.5 364.5L1446.5 344.5Z" fill={getFill('56')}/>
 <path id="57" d="M1318 382L1333.5 397L1346 405L1358.5 410L1372.5 411.5L1390.5 410L1414.3 402L1440.5 446.5L1426.5 453L1409 459L1392.5 463.5H1374L1352.5 461.5L1335 456.5L1318 449V382Z" fill={getFill('57')}/>
 </g>
-<g id="crossway 1">
-<path id="Polygon 29" d="M601.65 149.843C599.682 137.075 607.598 124.859 620.056 121.438C634.672 117.425 649.533 127.002 651.915 141.971L707.057 488.42C709.113 501.338 701.367 513.805 688.874 517.683C673.519 522.45 657.518 512.452 655.07 496.562L601.65 149.843Z" fill="#0059FF"/>
-<path id="right" d="M669.216 316.878C669.701 316.207 669.55 315.269 668.878 314.784L657.934 306.88C657.262 306.395 656.325 306.546 655.84 307.218C655.355 307.889 655.506 308.827 656.178 309.312L665.906 316.338L658.88 326.066C658.395 326.738 658.546 327.675 659.218 328.16C659.889 328.645 660.827 328.494 661.312 327.822L669.216 316.878ZM637 321L637.239 322.481L668.239 317.481L668 316L667.761 314.519L636.761 319.519L637 321Z" fill="white"/>
-<path id="left" d="M637.831 319.549C637.363 320.232 637.538 321.166 638.221 321.634L649.36 329.262C650.043 329.73 650.977 329.556 651.445 328.872C651.913 328.189 651.738 327.255 651.055 326.787L641.154 320.006L647.935 310.106C648.403 309.422 648.228 308.489 647.545 308.02C646.861 307.552 645.928 307.727 645.46 308.41L637.831 319.549ZM669.934 314.623L669.659 313.149L638.793 318.922L639.069 320.396L639.345 321.871L670.21 316.098L669.934 314.623Z" fill="white"/>
-</g>
-<g id="crossway 2">
-<path id="Polygon 29_2" d="M1262.72 163.856C1262.75 156.255 1267.88 149.487 1275.24 147.318C1286.04 144.139 1296.65 151.979 1296.64 163.115L1296.18 527.475C1296.17 535.071 1291.24 541.915 1283.98 544.416C1272.61 548.333 1260.99 540.139 1261.04 528.243L1262.72 163.856Z" fill="#0059FF"/>
-<path id="Arrow 1" d="M1291.06 340.061C1291.65 339.475 1291.65 338.525 1291.06 337.939L1281.51 328.393C1280.93 327.808 1279.98 327.808 1279.39 328.393C1278.81 328.979 1278.81 329.929 1279.39 330.515L1287.88 339L1279.39 347.485C1278.81 348.071 1278.81 349.021 1279.39 349.607C1279.98 350.192 1280.93 350.192 1281.51 349.607L1291.06 340.061ZM1268 339V340.5H1290V339V337.5H1268V339Z" fill="white"/>
-<path id="Arrow 2" d="M1266.95 337.926C1266.36 338.504 1266.35 339.454 1266.93 340.047L1276.35 349.714C1276.93 350.307 1277.88 350.319 1278.47 349.741C1279.06 349.162 1279.08 348.213 1278.5 347.62L1270.12 339.027L1278.71 330.65C1279.31 330.072 1279.32 329.122 1278.74 328.529C1278.16 327.936 1277.21 327.924 1276.62 328.502L1266.95 337.926ZM1290 339.28L1290.02 337.78L1268.02 337.5L1268 339L1267.98 340.5L1289.98 340.78L1290 339.28Z" fill="white"/>
-</g>
-
 <circle id="Ellipse 14" cx="628" cy="568" r="5" fill="#0059FF"/>
 <circle id="Ellipse 25" cx="552" cy="112" r="5" fill="#0059FF"/>
 
@@ -256,7 +291,13 @@ const MapSVG = () => {
         {/* Path Lines */}
         {path.map((nodeId, i) =>
           i < path.length - 1 ? (
-            <PathLine key={i} from={nodeId} to={path[i + 1]} nodes={nodes} />
+            <PathLine 
+              key={i} 
+              from={nodeId} 
+              to={path[i + 1]} 
+              nodes={nodes}
+              isLastNode={i === path.length - 2} // True only for the last segment
+            />
           ) : null
         )}
                 {/* Start Points */}
