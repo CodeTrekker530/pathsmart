@@ -1,0 +1,355 @@
+{
+  "products": {
+    "1": { "name": "Banana", "category": "Fruits" },
+    "2": { "name": "Tilapia", "category": "Seafood" },
+    "3": { "name": "Pork", "category": "Meat" },
+    "4": { "name": "Eggplant", "category": "Vegetables" },
+    "5": { "name": "Brown Sugar", "category": "Groceries" },
+    "6": { "name": "Tilapia", "category": "Seafood" },
+    "7": { "name": "Tomato", "category": "Vegetables" },
+    "8": { "name": "Rice (Sinandomeng)", "category": "Grains" },
+    "9": { "name": "Cooking Oil", "category": "Groceries" },
+    "10": { "name": "Carrot", "category": "Fruits" },
+    "11": { "name": "Chicken", "category": "Meat" },
+    "12": { "name": "Onion", "category": "Vegetables" },
+    "13": { "name": "Garlic", "category": "Vegetables" },
+    "14": { "name": "Fish Sauce", "category": "Condiments" },
+    "15": { "name": "Soy Sauce", "category": "Condiments" },
+    "16": { "name": "Ginger", "category": "Vegetables" },
+    "17": { "name": "Beef", "category": "Meat" },
+    "18": { "name": "Shrimp", "category": "Seafood" },
+    "19": { "name": "Crab", "category": "Seafood" },
+    "20": { "name": "Mussels", "category": "Seafood" },
+    "21": { "name": "Apple", "category": "Fruits" },
+    "22": { "name": "Orange", "category": "Fruits" },
+    "23": { "name": "Potato", "category": "Vegetables" },
+    "24": { "name": "Salt", "category": "Condiments" },
+    "25": { "name": "Black Pepper", "category": "Condiments" },
+    "26": { "name": "Vinegar", "category": "Condiments" },
+    "27": { "name": "Cabbage", "category": "Vegetables" },
+    "28": { "name": "Lettuce", "category": "Vegetables" },
+    "29": { "name": "Bell Pepper", "category": "Vegetables" },
+    "30": { "name": "Corn", "category": "Vegetables" }
+  },
+
+  "sections": {
+    "1": {
+      "name": "Wet Market A",
+      "nodes": [14, 15, 16, 17],
+      "stalls": [1, 2, 3, 4, 5, 6, 7, 8]
+    },
+    "2": {
+      "name": "Wet Market B",
+      "nodes": [18, 19, 20],
+      "stalls": [9, 10, 11, 12, 13, 14, 15]
+    },
+    "3": {
+      "name": "Dry Goods A",
+      "nodes": [21, 22],
+      "stalls": [16, 17, 18, 19, 20, 21]
+    },
+    "4": {
+      "name": "Dry Goods B",
+      "nodes": [23, 24, 25],
+      "stalls": [22, 23, 24, 25, 26]
+    },
+    "5": {
+      "name": "Fresh Produce A",
+      "nodes": [26, 27, 28],
+      "stalls": [27, 28, 29, 30, 31]
+    },
+    "6": {
+      "name": "Fresh Produce B",
+      "nodes": [29, 30, 31],
+      "stalls": [32, 33, 34, 35]
+    }
+  },
+
+  "stalls": {
+    "1": {
+      "name": "Fresh Veggies 1",
+      "nodes": [14],
+      "products": [4, 7, 12, 13, 16]
+    },
+    "2": {
+      "name": "Seafood Corner 1",
+      "nodes": [15],
+      "products": [2, 18, 19, 20]
+    },
+    "3": {
+      "name": "Meat Shop 1",
+      "nodes": [16],
+      "products": [3, 11, 17]
+    },
+    "4": {
+      "name": "Rice & Grains 1",
+      "nodes": [17],
+      "products": [8]
+    },
+    "5": {
+      "name": "Fresh Veggies 2",
+      "nodes": [18],
+      "products": [23, 27, 28, 29]
+    },
+    "6": {
+      "name": "Seafood Corner 2",
+      "nodes": [19],
+      "products": [2, 6, 18]
+    },
+    "7": {
+      "name": "Meat Shop 2",
+      "nodes": [20],
+      "products": [3, 11]
+    },
+    "8": {
+      "name": "Condiments Store 1",
+      "nodes": [21],
+      "products": [14, 15, 24, 25, 26]
+    },
+    "9": {
+      "name": "Fresh Fruits 1",
+      "nodes": [22],
+      "products": [1, 10, 21, 22]
+    },
+    "10": {
+      "name": "Fresh Veggies 3",
+      "nodes": [23],
+      "products": [4, 7, 27]
+    },
+    "11": {
+      "name": "Fresh Fruits 2",
+      "nodes": [24],
+      "products": [1, 10, 21, 22]
+    },
+    "12": {
+      "name": "Condiments Store 2",
+      "nodes": [25],
+      "products": [14, 15, 24, 25, 26]
+    },
+    "13": {
+      "name": "Rice & Grains 2",
+      "nodes": [26],
+      "products": [8]
+    },
+    "14": {
+      "name": "Fresh Veggies 4",
+      "nodes": [27],
+      "products": [23, 27, 28, 29]
+    },
+    "15": {
+      "name": "Seafood Corner 3",
+      "nodes": [28],
+      "products": [2, 6, 18]
+    },
+    "16": {
+      "name": "Meat Shop 3",
+      "nodes": [29],
+      "products": [3, 11]
+    },
+    "17": {
+      "name": "Fresh Fruits 3",
+      "nodes": [30],
+      "products": [1, 10, 21, 22]
+    },
+    "18": {
+      "name": "Fresh Veggies 5",
+      "nodes": [31],
+      "products": [4, 7, 27]
+    },
+    "19": {
+      "name": "Seafood Corner 4",
+      "nodes": [32],
+      "products": [2, 6, 18]
+    },
+    "20": {
+      "name": "Meat Shop 4",
+      "nodes": [33],
+      "products": [3, 11]
+    },
+    "21": {
+      "name": "Fresh Fruits 4",
+      "nodes": [34],
+      "products": [1, 10, 21, 22]
+    },
+    "22": {
+      "name": "Fresh Veggies 6",
+      "nodes": [35],
+      "products": [4, 7, 27]
+    },
+    "23": {
+      "name": "Seafood Corner 5",
+      "nodes": [36],
+      "products": [2, 6, 18]
+    },
+    "24": {
+      "name": "Meat Shop 5",
+      "nodes": [37],
+      "products": [3, 11]
+    },
+    "25": {
+      "name": "Fresh Fruits 5",
+      "nodes": [38],
+      "products": [1, 10, 21, 22]
+    },
+    "26": {
+      "name": "Fresh Veggies 7",
+      "nodes": [39],
+      "products": [4, 7, 27]
+    },
+    "27": {
+      "name": "Seafood Corner 6",
+      "nodes": [40],
+      "products": [2, 6, 18]
+    },
+    "28": {
+      "name": "Meat Shop 6",
+      "nodes": [41],
+      "products": [3, 11]
+    },
+    "29": {
+      "name": "Fresh Fruits 6",
+      "nodes": [42],
+      "products": [1, 10, 21, 22]
+    },
+    "30": {
+      "name": "Fresh Veggies 8",
+      "nodes": [43],
+      "products": [4, 7, 27]
+    },
+    "31": {
+      "name": "Seafood Corner 7",
+      "nodes": [44],
+      "products": [2, 6, 18]
+    },
+    "32": {
+      "name": "Meat Shop 7",
+      "nodes": [45],
+      "products": [3, 11]
+    },
+    "33": {
+      "name": "Fresh Fruits 7",
+      "nodes": [46],
+      "products": [1, 10, 21, 22]
+    },
+    "34": {
+      "name": "Fresh Veggies 9",
+      "nodes": [47],
+      "products": [4, 7, 27]
+    },
+    "35": {
+      "name": "Seafood Corner 8",
+      "nodes": [48],
+      "products": [2, 6, 18]
+    },
+    "36": {
+      "name": "Meat Shop 8",
+      "nodes": [49],
+      "products": [3, 11]
+    },
+    "37": {
+      "name": "Fresh Fruits 8",
+      "nodes": [50],
+      "products": [1, 10, 21, 22]
+    },
+    "38": {
+      "name": "Fresh Veggies 10",
+      "nodes": [51],
+      "products": [4, 7, 27]
+    },
+    "39": {
+      "name": "Seafood Corner 9",
+      "nodes": [52],
+      "products": [2, 6, 18]
+    },
+    "40": {
+      "name": "Meat Shop 9",
+      "nodes": [53],
+      "products": [3, 11]
+    },
+    "41": {
+      "name": "Fresh Fruits 9",
+      "nodes": [54],
+      "products": [1, 10, 21, 22]
+    },
+    "42": {
+      "name": "Fresh Veggies 11",
+      "nodes": [55],
+      "products": [4, 7, 27]
+    },
+    "43": {
+      "name": "Seafood Corner 10",
+      "nodes": [56],
+      "products": [2, 6, 18]
+    },
+    "44": {
+      "name": "Meat Shop 10",
+      "nodes": [57],
+      "products": [3, 11]
+    },
+    "45": {
+      "name": "Fresh Fruits 10",
+      "nodes": [58],
+      "products": [1, 10, 21, 22]
+    },
+    "46": {
+      "name": "Fresh Veggies 12",
+      "nodes": [59],
+      "products": [4, 7, 27]
+    },
+    "47": {
+      "name": "Seafood Corner 11",
+      "nodes": [60],
+      "products": [2, 6, 18]
+    },
+    "48": {
+      "name": "Meat Shop 11",
+      "nodes": [61],
+      "products": [3, 11]
+    },
+    "49": {
+      "name": "Fresh Fruits 11",
+      "nodes": [62],
+      "products": [1, 10, 21, 22]
+    },
+    "50": {
+      "name": "Fresh Veggies 13",
+      "nodes": [63],
+      "products": [4, 7, 27]
+    },
+    "51": {
+      "name": "Seafood Corner 12",
+      "nodes": [64],
+      "products": [2, 6, 18]
+    },
+    "52": {
+      "name": "Meat Shop 12",
+      "nodes": [65],
+      "products": [3, 11]
+    },
+    "53": {
+      "name": "Fresh Fruits 12",
+      "nodes": [66],
+      "products": [1, 10, 21, 22]
+    },
+    "54": {
+      "name": "Fresh Veggies 14",
+      "nodes": [67],
+      "products": [4, 7, 27]
+    },
+    "55": {
+      "name": "Seafood Corner 13",
+      "nodes": [68],
+      "products": [2, 6, 18]
+    },
+    "56": {
+      "name": "Meat Shop 13",
+      "nodes": [69],
+      "products": [3, 11]
+    },
+    "57": {
+      "name": "General Store 5",
+      "nodes": [45],
+      "products": [5, 9, 24]
+    }
+  }
+}
