@@ -1,7 +1,7 @@
 /* eslint-disable prettier/prettier */
 import { Svg, Path, Rect, G, Line, Circle, Text } from 'react-native-svg';
 import { useSelection } from '../context/SelectionContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import nodesData from './f1nodes.json';
 
 
@@ -10,7 +10,7 @@ const HIGHLIGHT_COLOR = '#609966';
 const DEFAULT_COLOR = '#D9D9D9';
 const START_POINT_COLOR = '#ff0000ff';
 const SELECTED_START_COLOR = '#00ff00';
-const DESTINATION_COLOR = '#FFA500'; // Orange color for destination
+const DESTINATION_COLOR = '#0059FF'; // Orange color for destination
 const START_POINT_RADIUS = 20;
 
 const MapSVG = () => {
@@ -27,45 +27,26 @@ const MapSVG = () => {
       : [];
 
   // Handler for when a start point is clicked
-  const handleStartPointClick = (nodeId) => {
-    if (!startNodeId) {
-      // First click sets start node
-      setStartNodeId(nodeId);
-    } else if (!endNodeId) {
-      // Second click sets end node
-      setEndNodeId(nodeId);
-    } else {
-      // If both are set, reset and set new start
-      setStartNodeId(nodeId);
-      setEndNodeId(null);
+  const handleStartPointClick = async (nodeId) => {
+    setStartNodeId(nodeId);
+    
+    // Generate path immediately
+    try {
+      const response = await fetch('http://localhost:5000/findpath', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          start: nodeId
+        })
+      });
+      const data = await response.json();
+      setPath(data.path);
+    } catch (error) {
+      console.error('Error fetching path:', error);
     }
   };
-
-  // Effect to fetch path when start or end nodes change
-  useEffect(() => {
-    const fetchPath = async () => {
-      if (startNodeId && endNodeId) {
-        try {
-          const response = await fetch(`http://localhost:5000/findpath`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              start: startNodeId,
-              end: endNodeId
-            })
-          });
-          const data = await response.json();
-          setPath(data.path);
-        } catch (error) {
-          console.error('Error fetching path:', error);
-        }
-      }
-    };
-
-    fetchPath();
-  }, [startNodeId, endNodeId]);
 
   const DestinationMarker = ({ x, y }) => (
     <Circle
@@ -305,7 +286,7 @@ const MapSVG = () => {
         <StartPoint id={25} cx={552} cy={112} label="Entrance B" />
         <StartPoint id={45} cx={756} cy={611} label="Entrance C" />
         <StartPoint id={119} cx={659} cy={21} label="Entrance D" />
-        <StartPoint id={49} cx={980} cy={611} label="Entrance E" />
+        <StartPoint id={225} cx={1251} cy={611} label="Entrance E" />
         <StartPoint id={104}cx={1251} cy={70} label="Entrance F" />
         <StartPoint id={134} cx={1309} cy={611} label="Entrance G" />
         <StartPoint id={207} cx={1316} cy={76} label="Entrance H" />
