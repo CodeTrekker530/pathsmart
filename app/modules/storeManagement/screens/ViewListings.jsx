@@ -101,7 +101,10 @@ export default function ViewListings() {
   const clearFilters = () => { setSearchText(''); setSelectedCategories([]); };
 
   const filteredListings = listings.filter(l => {
-    const matchCat = selectedCategories.length === 0 || selectedCategories.includes(l.category);
+    const selectedNorm = selectedCategories.map(s => String(s).toLowerCase());
+    const matchCat =
+      selectedCategories.length === 0 ||
+      selectedNorm.includes(String(l.category || '').toLowerCase());
     const txt = searchText.trim().toLowerCase();
     const matchTxt = txt === '' || l.name?.toLowerCase().includes(txt) || l.category?.toLowerCase().includes(txt);
     return matchCat && matchTxt;

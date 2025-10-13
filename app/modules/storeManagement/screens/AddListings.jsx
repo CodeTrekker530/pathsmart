@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSelection } from '../../../context/SelectionContext';
 import { useAuth } from '../../../context/AuthContext';
 import Sidebar from '../components/Sidebar';
+import { supabase } from '../../../../backend/supabaseClient';
 
 const ICON_SIZE = 28;
 
@@ -13,6 +14,10 @@ export default function AddListings() {
   const [successVisible, setSuccessVisible] = React.useState(false);
   const [successSummary, setSuccessSummary] = React.useState({ addedCount: 0, skippedCount: 0 });
   const [selectedKeys, setSelectedKeys] = React.useState(new Set());
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  // Normalized items fetched from DB: { id, name, category, imageSource, type }
+  const [items, setItems] = React.useState([]);
 
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -27,33 +32,65 @@ export default function AddListings() {
   }, [currentId, setCurrentBusinessId]);
   const { logout } = useAuth();
 
-  // Unified listing templates; choose based on business type
-  const templates = isBarbershop
-    ? [
-        { name: 'Haircut', category: 'Hair', image: require('../../../assets/haircut.png') },
-        { name: 'Hair color', category: 'Hair', image: require('../../../assets/haircolor.png') },
-      ]
-    : [
-        { name: 'Banana', category: 'Fruit', image: require('../../../assets/banana.png') },
-        { name: 'Baguio beans', category: 'Vegetable', image: require('../../../assets/baguio_beans.png') },
-      ];
-  
-  const CATEGORY_SET = isBarbershop ? ['Hair'] : ['Vegetable', 'Meat', 'Fruit', 'Fish', 'Poultry', 'Grocery', 'Pasalubong'];
+  // Fetch products/services dynamically from Supabase
+  React.useEffect(() => {
+    let mounted = true;
+    async function loadItems() {
+      setLoading(true);
+      setError('');
+      try {
+        const { data, error } = await supabase
+          .from('product_and_services')
+          .select('pns_id, name, pns_category, pns_image, type');
+        if (error) throw error;
+
+        // Normalize for UI
+        const normalized = (data || []).map(row => ({
+          id: row.pns_id,
+          name: row.name,
+          category: row.pns_category,
+          // If pns_image is a full URL, use it; else fallback image
+          imageSource: row.pns_image && /^https?:\/\//i.test(row.pns_image)
+            ? { uri: row.pns_image }
+            : require('../../../assets/image.png'),
+          type: row.type || '',
+        }));
+        if (mounted) setItems(normalized);
+      } catch (e) {
+        console.warn('[AddListings] loadItems error:', e);
+        if (mounted) setError('Failed to load items.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    loadItems();
+    return () => { mounted = false; };
+  }, []);
+
+  // Derive categories from fetched data
+  const CATEGORY_SET = React.useMemo(() => {
+    const cats = Array.from(new Set(items.map(it => it.category).filter(Boolean)));
+    // Provide a fallback if none detected
+    return cats.length > 0 ? cats : ['Vegetable', 'Meat', 'Fruit', 'Fish', 'Poultry', 'Grocery', 'Pasalubong', 'Hair'];
+  }, [items]);
 
   const toggleCategory = (c) => {
     setSelectedCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
   };
   const clearFilters = () => { setSearchText(''); setSelectedCategories([]); };
 
-  const filteredTemplates = templates.filter(t => {
-    const matchCat = selectedCategories.length === 0 || selectedCategories.includes(t.category);
+  const filteredItems = items.filter(t => {
+    const selectedNorm = selectedCategories.map(s => String(s).toLowerCase());
+    const matchCat =
+      selectedCategories.length === 0 ||
+      selectedNorm.includes(String(t.category || '').toLowerCase());
     const txt = searchText.trim().toLowerCase();
     const matchTxt = txt === '' || t.name.toLowerCase().includes(txt) || t.category.toLowerCase().includes(txt);
     return matchCat && matchTxt;
   });
   
   // Selection helpers
-  const keyFor = (item) => `${item.name}__${item.category}`;
+  const keyFor = (item) => item.id ?? `${item.name}__${item.category}`;
   const existsInBusiness = (item) => listings.some(l => l.name === item.name && l.category === item.category);
   const isSelected = (item) => selectedKeys.has(keyFor(item));
   const toggleSelect = (item) => {
@@ -67,14 +104,22 @@ export default function AddListings() {
   };
   const clearSelection = () => setSelectedKeys(new Set());
   const selectAllFiltered = () => {
-    const selectable = filteredTemplates.filter(t => !existsInBusiness(t));
+    const selectable = filteredItems.filter(t => !existsInBusiness(t));
     setSelectedKeys(new Set(selectable.map(keyFor)));
   };
 
   const addSelected = () => {
     if (selectedKeys.size === 0) return;
     // Resolve selected items from full templates list to avoid filter dependency
-    const selectedList = templates.filter(t => selectedKeys.has(keyFor(t)) && !existsInBusiness(t));
+    const selectedList = items
+      .filter(t => selectedKeys.has(keyFor(t)) && !existsInBusiness(t))
+      .map(t => ({
+        name: t.name,
+        category: t.category,
+        image: t.imageSource,
+        type: t.type,
+        availability: 'Available', // default availability
+      }));
     const summary = addListingsBulk(selectedList);
     setSuccessSummary({ addedCount: summary.addedCount, skippedCount: summary.skippedCount });
     setSuccessVisible(true);
@@ -170,15 +215,19 @@ export default function AddListings() {
 
         {/* Listings */}
         <View style={styles.listingsRow}>
-          {filteredTemplates.length === 0 ? (
-            <Text style={{ color: '#666', fontSize: 15 }}>No templates match your filters.</Text>
+          {loading ? (
+            <Text style={{ color: '#666', fontSize: 15 }}>Loading items...</Text>
+          ) : error ? (
+            <Text style={{ color: '#c0392b', fontSize: 15 }}>{error}</Text>
+          ) : filteredItems.length === 0 ? (
+            <Text style={{ color: '#666', fontSize: 15 }}>No items match your filters.</Text>
           ) : (
-            filteredTemplates.map((item, idx) => {
+            filteredItems.map((item, idx) => {
               const exists = existsInBusiness(item);
               const selected = isSelected(item);
               return (
-                <TouchableOpacity key={idx} style={[styles.card, selected && styles.cardSelected, exists && styles.cardDisabled]} onPress={() => toggleSelect(item)} activeOpacity={exists ? 1 : 0.8} disabled={exists}>
-                  <Image source={item.image} style={styles.cardImage} />
+                <TouchableOpacity key={item.id ?? idx} style={[styles.card, selected && styles.cardSelected, exists && styles.cardDisabled]} onPress={() => toggleSelect(item)} activeOpacity={exists ? 1 : 0.8} disabled={exists}>
+                  <Image source={item.imageSource} style={styles.cardImage} />
                   <View style={styles.cardHeaderRow}>
                     <Text style={styles.cardName}>{item.name}</Text>
                     <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
