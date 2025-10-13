@@ -21,6 +21,12 @@ export default function Sidebar({ onAccountPress }) {
     router.replace('/screens/loginScreen');
   };
 
+  const handleGoToDashboard = () => {
+    // Navigate to the Store Management dashboard screen
+    // Keeping lower-case to match the file name `dashboard.jsx`.
+    router.replace('/modules/storeManagement/screens/dashboard');
+  };
+
   return (
     <View
       style={[styles.sidebar, sidebarExpanded && styles.sidebarExpanded]}
@@ -44,6 +50,19 @@ export default function Sidebar({ onAccountPress }) {
             style={styles.sidebarIcon}
           />
           {sidebarExpanded && <Text style={styles.menuText}>Account</Text>}
+        </TouchableOpacity>
+
+        {/* Dashboard Navigation */}
+        <TouchableOpacity
+          style={[styles.iconBtn, styles.dashboardBtn]}
+          onPress={handleGoToDashboard}
+        >
+          <Image
+            // Using a home icon as the dashboard symbol; swap if you prefer another.
+            source={require('../../../assets/home.png')}
+            style={[styles.sidebarIcon, styles.dashboardIcon]}
+          />
+          {sidebarExpanded && <Text style={styles.menuText}>Dashboard</Text>}
         </TouchableOpacity>
       </View>
 
@@ -80,17 +99,18 @@ const styles = StyleSheet.create({
   },
   middleGroup: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     width: '100%',
+    paddingBottom: 24,
   },
   logoContainer: {
-    marginBottom: 22,
+    marginBottom: 28,
     width: '100%',
     alignItems: 'center',
   },
   iconBtn: {
-    marginTop: 8,
+    marginVertical: 20,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -110,6 +130,9 @@ const styles = StyleSheet.create({
     height: ICON_SIZE,
     resizeMode: 'contain',
   },
+  dashboardIcon: {
+    tintColor: '#FFFFFF',
+  },
   logoIcon: {
     width: ICON_SIZE + 6,
     height: ICON_SIZE + 6,
@@ -118,5 +141,9 @@ const styles = StyleSheet.create({
     color: 'white',
     marginLeft: 15,
     fontSize: 16,
+  },
+  // Extra spacing so Dashboard isn't too close to Account
+  dashboardBtn: {
+    marginTop: 18,
   },
 });
