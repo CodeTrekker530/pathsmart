@@ -4,10 +4,10 @@ import { View, Text, TextInput, TouchableOpacity, Image, FlatList } from 'react-
 import styles from './assets/Styles/SearchStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { fetchProductAndServices } from '../backend/server';
-import { useSelection } from './context/SelectionContext'; 
+import { useSelection } from './context/SelectionContext';
 import { LinearGradient } from 'expo-linear-gradient';
-import ToolsDropdown from './components/ToolsDropdown'; // adjust path if needed
+import ToolsDropdown from './components/ToolsDropdown';
+import saveData from './utils/saveData.json';
 
 let debounceTimer;
 
@@ -25,14 +25,59 @@ export default function SearchScreen() {
     'image.png': require('./assets/image.png'),
   };
 
-  const loadData = async (searchTerm = '') => {
-      const results = await fetchProductAndServices(searchTerm);
-      setData(results);
-    };
-    // Load once on mount
-    useEffect(() => {
-      loadData();
-    }, []);
+  const loadData = (searchTerm = '') => {
+    const searchLower = searchTerm.toLowerCase();
+    let results = [];
+    let stallsWithProduct = new Map(); // Track which stalls have which products
+
+    // First pass: find matching products
+    Object.entries(saveData.products).forEach(([productId, product]) => {
+      if (product.name.toLowerCase().includes(searchLower) || 
+          product.category.toLowerCase().includes(searchLower)) {
+        // For each matching product, find stalls that sell it
+        let stallNodes = [];
+        
+        // Browse through all stalls
+        Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
+          // Check if this stall sells the product
+          if (stall.products.includes(Number(productId))) {
+            // Add this stall's nodes to our list
+            stallNodes.push(...stall.nodes);
+          }
+        });
+
+        results.push({
+          id: `p${productId}`,
+          name: product.name,
+          category: product.category,
+          type: 'Product',
+          node_id: stallNodes, // Only nodes of stalls that sell this specific product
+          image: 'image.png'
+        });
+      }
+    });
+
+    // Second pass: find matching stalls by name
+    Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
+      if (stall.name.toLowerCase().includes(searchLower)) {
+        results.push({
+          id: `s${stallId}`,
+          name: stall.name,
+          category: 'Stall',
+          type: 'Stall',
+          node_id: stall.nodes,
+          image: 'image.png'
+        });
+      }
+    });
+
+    setData(results);
+  };
+
+  // Load once on mount
+  useEffect(() => {
+    loadData();
+  }, []);
 
   useEffect(() => {
     clearTimeout(debounceTimer);
