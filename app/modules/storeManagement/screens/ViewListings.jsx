@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSelection } from '../../../context/SelectionContext';
+// import { useSelection } from '../../../context/SelectionContext';
 import { useAuth } from '../../../context/AuthContext';
 import Sidebar from '../components/Sidebar';
+import { supabase } from '../../../../backend/supabaseClient';
 
 const ICON_SIZE = 28;
 
@@ -21,10 +22,47 @@ export default function ViewListings() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const currentId = params.id || 'vegetable1';
-  const { listings, removeListing, updateListing, setCurrentBusinessId } = useSelection();
+  const [listings, setListings] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
   React.useEffect(() => {
-    setCurrentBusinessId(currentId);
-  }, [currentId, setCurrentBusinessId]);
+    let mounted = true;
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const stallId = Number(currentId);
+        if (!Number.isFinite(stallId)) {
+          setListings([]);
+          setLoading(false);
+          return;
+        }
+        const { data, error } = await supabase
+          .from('listing')
+          .select('listing_id, price, is_available, pns_id, product_and_services(name, pns_category, pns_image)')
+          .eq('stall_id', stallId);
+        if (error) throw error;
+        const mapped = (data || []).map(row => ({
+          listing_id: row.listing_id,
+          name: row.product_and_services?.name || 'Item',
+          category: row.product_and_services?.pns_category || '',
+          image: row.product_and_services?.pns_image && /^https?:\/\//i.test(row.product_and_services?.pns_image)
+            ? { uri: row.product_and_services.pns_image }
+            : require('../../../assets/image.png'),
+          price: String(row.price ?? ''),
+          availability: row.is_available ? 'Available' : 'Not Available',
+        }));
+        if (mounted) setListings(mapped);
+      } catch (e) {
+        console.warn('[ViewListings] load error:', e);
+        if (mounted) setError('Failed to load listings.');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [currentId]);
   const { logout } = useAuth();
 
   // Modal state
@@ -69,14 +107,23 @@ export default function ViewListings() {
   const saveEdit = () => {
     if (editingIndex !== null) {
       const cleanPrice = cleanDecimal(editingPrice || '');
-      const updatedListing = {
-        ...listings[editingIndex],
-        name: editingName,
-        price: cleanPrice,
-        availability: editingAvailability,
-      };
-      updateListing(editingIndex, updatedListing);
-      cancelEdit();
+      const l = listings[editingIndex];
+      (async () => {
+        try {
+          const { error } = await supabase
+            .from('listing')
+            .update({
+              price: Number(cleanPrice || 0),
+              is_available: editingAvailability === 'Available',
+            })
+            .eq('listing_id', l.listing_id);
+          if (error) throw error;
+          setListings(prev => prev.map((it, i) => i === editingIndex ? { ...it, price: cleanPrice, availability: editingAvailability } : it));
+          cancelEdit();
+        } catch (e) {
+          console.warn('[ViewListings] save edit error:', e);
+        }
+      })();
     }
   };
 
@@ -93,8 +140,11 @@ export default function ViewListings() {
     router.replace('/screens/loginScreen');
   };
 
-  const isBarbershop = currentId === 'barbershop1';
-  const CATEGORY_SET = isBarbershop ? ['Hair'] : ['Vegetable','Meat','Fruit','Fish','Poultry','Grocery','Pasalubong'];
+  const CATEGORY_SET = React.useMemo(() => {
+    const set = new Set(listings.map(l => l.category).filter(Boolean));
+    const arr = Array.from(set);
+    return arr.length > 0 ? arr : ['Vegetable','Meat','Fruit','Fish','Poultry','Grocery','Pasalubong'];
+  }, [listings]);
   const toggleCategory = (c) => {
     setSelectedCategories(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
   };
@@ -142,7 +192,11 @@ export default function ViewListings() {
         </View>
 
         <View style={styles.listingsRow}>
-            {filteredListings.length === 0 ? (
+            {loading ? (
+              <Text style={{ color: '#666' }}>Loading...</Text>
+            ) : error ? (
+              <Text style={{ color: '#c0392b' }}>{error}</Text>
+            ) : filteredListings.length === 0 ? (
               <View style={styles.centerContent}>
                 <Text style={styles.noListingsText}>No listings match your filters.</Text>
                 <TouchableOpacity
@@ -176,7 +230,21 @@ export default function ViewListings() {
                   <View style={styles.cardButtonRow}>
                     <TouchableOpacity
                       style={styles.removeButton}
-                      onPress={() => removeListing(idx)}
+                      onPress={() => {
+                        const l = listings[idx];
+                        (async () => {
+                          try {
+                            const { error } = await supabase
+                              .from('listing')
+                              .delete()
+                              .eq('listing_id', l.listing_id);
+                            if (error) throw error;
+                            setListings(prev => prev.filter((_, i) => i !== idx));
+                          } catch (e) {
+                            console.warn('[ViewListings] delete error:', e);
+                          }
+                        })();
+                      }}
                     >
                       <Text style={styles.removeButtonText}>Remove</Text>
                     </TouchableOpacity>

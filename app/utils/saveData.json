@@ -115,13 +115,13 @@
       "name": "Condiments Store 1",
       "nodes": [8],
       "products": [14, 15, 24, 25, 26],
-      "pathNode": 65
+      "pathNode": [40,87]
     },
     "9": {
       "name": "Fresh Fruits 1",
       "nodes": [9],
       "products": [1, 10, 21, 22],
-      "pathNode": 66
+      "pathNode": [115,11]
     },
     "10": {
       "name": "Fresh Veggies 3",
@@ -253,7 +253,7 @@
       "name": "Seafood Corner 7",
       "nodes": [31],
       "products": [2, 6, 18],
-      "pathNode": 88
+      "pathNode": [181]
     },
     "32": {
       "name": "Meat Shop 7",
@@ -271,7 +271,7 @@
       "name": "Fresh Veggies 9",
       "nodes": [34],
       "products": [4, 7, 27],
-      "pathNode": 91
+      "pathNode": [187]
     },
     "35": {
       "name": "Seafood Corner 8",
@@ -325,7 +325,7 @@
       "name": "Seafood Corner 10",
       "nodes": [43],
       "products": [2, 6, 18],
-      "pathNode": 100
+      "pathNode": [97]
     },
     "44": {
       "name": "Meat Shop 10",
@@ -337,7 +337,7 @@
       "name": "Fresh Fruits 10",
       "nodes": [45],
       "products": [1, 10, 21, 22],
-      "pathNode": 102
+      "pathNode": [1]
     },
     "46": {
       "name": "Fresh Veggies 12",
@@ -373,7 +373,7 @@
       "name": "Seafood Corner 12",
       "nodes": [51],
       "products": [2, 6, 18],
-      "pathNode": 108
+      "pathNode": [117,123]
     },
     "52": {
       "name": "Meat Shop 12",
@@ -397,13 +397,13 @@
       "name": "Seafood Corner 13",
       "nodes": [55],
       "products": [2, 6, 18],
-      "pathNode": 112
+      "pathNode": [71]
     },
     "56": {
       "name": "Meat Shop 13",
       "nodes": [56],
       "products": [3, 11],
-      "pathNode": 113
+      "pathNode": []
     },
     "57": {
       "name": "General Store 5",

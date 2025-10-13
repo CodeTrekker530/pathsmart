@@ -18,6 +18,8 @@ export default function AddListings() {
   const [error, setError] = React.useState('');
   // Normalized items fetched from DB: { id, name, category, imageSource, type }
   const [items, setItems] = React.useState([]);
+  // Track which products/services are already in listing for current stall
+  const [existingPnsIds, setExistingPnsIds] = React.useState(new Set());
 
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -67,6 +69,30 @@ export default function AddListings() {
     return () => { mounted = false; };
   }, []);
 
+  // Load existing listings for this stall so we can prevent duplicates and show badges
+  React.useEffect(() => {
+    let mounted = true;
+    async function loadExisting() {
+      try {
+        const stallId = Number(currentId);
+        if (!Number.isFinite(stallId)) {
+          return; // non-numeric route id; skip DB lookup
+        }
+        const { data, error } = await supabase
+          .from('listing')
+          .select('pns_id')
+          .eq('stall_id', stallId);
+        if (error) throw error;
+        const s = new Set((data || []).map(r => r.pns_id));
+        if (mounted) setExistingPnsIds(s);
+      } catch (e) {
+        console.warn('[AddListings] loadExisting error:', e);
+      }
+    }
+    loadExisting();
+    return () => { mounted = false; };
+  }, [currentId]);
+
   // Derive categories from fetched data
   const CATEGORY_SET = React.useMemo(() => {
     const cats = Array.from(new Set(items.map(it => it.category).filter(Boolean)));
@@ -91,7 +117,7 @@ export default function AddListings() {
   
   // Selection helpers
   const keyFor = (item) => item.id ?? `${item.name}__${item.category}`;
-  const existsInBusiness = (item) => listings.some(l => l.name === item.name && l.category === item.category);
+  const existsInBusiness = (item) => existingPnsIds.has(item.id);
   const isSelected = (item) => selectedKeys.has(keyFor(item));
   const toggleSelect = (item) => {
     if (existsInBusiness(item)) return; // cannot select duplicates
@@ -110,24 +136,43 @@ export default function AddListings() {
 
   const addSelected = () => {
     if (selectedKeys.size === 0) return;
-    // Resolve selected items from full templates list to avoid filter dependency
-    const selectedList = items
-      .filter(t => selectedKeys.has(keyFor(t)) && !existsInBusiness(t))
-      .map(t => ({
-        name: t.name,
-        category: t.category,
-        image: t.imageSource,
-        type: t.type,
-        availability: 'Available', // default availability
-      }));
-    const summary = addListingsBulk(selectedList);
-    setSuccessSummary({ addedCount: summary.addedCount, skippedCount: summary.skippedCount });
-    setSuccessVisible(true);
-    clearSelection();
-    setTimeout(() => {
-      setSuccessVisible(false);
-      router.replace({ pathname: '/modules/storeManagement/screens/ViewListings', params: { id: currentId } });
-    }, 1200);
+    const stallId = Number(currentId);
+    if (!Number.isFinite(stallId)) {
+      setError('Invalid stall id.');
+      return;
+    }
+    // Build insert rows: only stall_id and pns_id; DB defaults handle price and is_available
+    const selectable = items.filter(t => selectedKeys.has(keyFor(t)));
+    const toInsert = selectable
+      .filter(t => !existingPnsIds.has(t.id))
+      .map(t => ({ stall_id: stallId, pns_id: t.id }));
+
+    (async () => {
+      try {
+        let addedCount = 0;
+        if (toInsert.length > 0) {
+          const { data, error } = await supabase
+            .from('listing')
+            .insert(toInsert)
+            .select('pns_id');
+          if (error) throw error;
+          addedCount = (data || []).length;
+          // Update local set so UI shows Already added
+          setExistingPnsIds(prev => new Set([...(prev || new Set()), ...toInsert.map(r => r.pns_id)]));
+        }
+        const skippedCount = selectable.length - addedCount;
+        setSuccessSummary({ addedCount, skippedCount });
+        setSuccessVisible(true);
+        clearSelection();
+        setTimeout(() => {
+          setSuccessVisible(false);
+          router.replace({ pathname: '/modules/storeManagement/screens/ViewListings', params: { id: currentId } });
+        }, 900);
+      } catch (e) {
+        console.warn('[AddListings] insert listing error:', e);
+        setError('Failed to add to listings.');
+      }
+    })();
   };
 
   const handleLogout = () => {
