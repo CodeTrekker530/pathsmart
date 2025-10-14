@@ -121,7 +121,7 @@
       "name": "Fresh Fruits 1",
       "nodes": [9],
       "products": [1, 10, 21, 22],
-      "pathNode": [115,11]
+      "pathNode": [115, 111]
     },
     "10": {
       "name": "Fresh Veggies 3",
@@ -373,7 +373,7 @@
       "name": "Seafood Corner 12",
       "nodes": [51],
       "products": [2, 6, 18],
-      "pathNode": [117,123]
+      "pathNode": [117, 123]
     },
     "52": {
       "name": "Meat Shop 12",

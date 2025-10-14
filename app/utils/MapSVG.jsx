@@ -4,13 +4,11 @@ import { useSelection } from '../context/SelectionContext';
 import React, { useState } from 'react';
 import nodesData from './f1nodes.json';
 
-
-
 const HIGHLIGHT_COLOR = '#609966';
 const DEFAULT_COLOR = '#D9D9D9';
 const START_POINT_COLOR = '#ff0000ff';
 const SELECTED_START_COLOR = '#00ff00';
-const DESTINATION_COLOR = '#0059FF'; // Orange color for destination
+const DESTINATION_COLOR = '#0059FF';
 const START_POINT_RADIUS = 20;
 
 const MapSVG = () => {
@@ -30,18 +28,38 @@ const MapSVG = () => {
   const handleStartPointClick = async (nodeId) => {
     setStartNodeId(nodeId);
     
-    // Generate path immediately
+    if (!selectedItem?.id) {
+      console.error('No product selected');
+      return;
+    }
+
     try {
+      // Remove 'p' prefix and convert to number
+      const productId = Number(selectedItem.id.replace('p', ''));
+      
       const response = await fetch('http://localhost:5000/findpath', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          start: nodeId
+          start: nodeId,
+          product_id: productId
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      if (data.path && data.path.length > 0) {
+        const endNodeId = data.path[data.path.length - 1];
+        const endNode = nodes[endNodeId];
+        console.log('End Node ID used:', endNodeId);
+        console.log('End Node Coordinates:', { x: endNode.x, y: endNode.y });
+        console.log('Full path:', data.path);
+      }
       setPath(data.path);
     } catch (error) {
       console.error('Error fetching path:', error);
