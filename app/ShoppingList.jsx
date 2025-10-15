@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { fetchProductAndServices } from "../backend/server";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import saveData from './utils/saveData.json';
 
 const imageMap = {
   "image.png": require("./assets/image.png"),
-  // Add more mappings as needed
 };
 
 export default function ShoppingList() {
@@ -20,24 +19,84 @@ export default function ShoppingList() {
 
   const filters = ['All', 'Products', 'Stores', 'Services'];
 
+  const loadData = (searchTerm = '') => {
+    const searchLower = searchTerm.toLowerCase();
+    let results = [];
+
+    // Search through products
+    Object.entries(saveData.products).forEach(([id, product]) => {
+      if (product.name.toLowerCase().includes(searchLower) || 
+          product.category.toLowerCase().includes(searchLower)) {
+        results.push({
+          id: `p${id}`,
+          name: product.name,
+          category: product.category,
+          type: 'Product',
+          image: 'image.png'
+        });
+      }
+    });
+
+    // Search through stalls
+    Object.entries(saveData.stalls).forEach(([id, stall]) => {
+      if (stall.name.toLowerCase().includes(searchLower)) {
+        results.push({
+          id: `s${id}`,
+          name: stall.name,
+          category: 'Stall',
+          type: 'Stall',
+          node_id: stall.nodes[0],
+          image: 'image.png'
+        });
+      }
+    });
+
+    setSearchResults(results);
+  };
+
   useEffect(() => {
     let debounceTimer = setTimeout(() => {
-      fetchProductAndServices(search).then(setSearchResults);
+      loadData(search);
     }, 300);
     return () => clearTimeout(debounceTimer);
   }, [search]);
 
+  // Store shopping list in localStorage/AsyncStorage
+  const saveShoppingList = (items) => {
+    try {
+      localStorage.setItem('shoppingList', JSON.stringify(items));
+      console.log('Saved shopping list:', items); // Debug log
+    } catch (error) {
+      console.error('Error saving shopping list:', error);
+    }
+  };
+
   const addToList = (item) => {
     if (!listItems.some(i => i.id === item.id)) {
-      setListItems([...listItems, item]);
+      const newList = [...listItems, item];
+      setListItems(newList);
+      saveShoppingList(newList);
     }
   };
 
   const removeFromList = (id) => {
-    setListItems(listItems.filter(item => item.id !== id));
+    const newList = listItems.filter(item => item.id !== id);
+    setListItems(newList);
+    saveShoppingList(newList);
   };
 
-  // Filter search results based on selected filter
+  // Load saved list on mount
+  useEffect(() => {
+    const savedList = localStorage.getItem('shoppingList');
+    if (savedList) {
+      try {
+        setListItems(JSON.parse(savedList));
+      } catch (error) {
+        console.error('Error loading shopping list:', error);
+      }
+    }
+  }, []);
+
   const filteredResults = searchResults.filter(item => {
     if (selectedFilter === 'All') return true;
     if (selectedFilter === 'Products') return item.type === 'Product';
@@ -45,6 +104,14 @@ export default function ShoppingList() {
     if (selectedFilter === 'Services') return item.category?.toLowerCase().includes('service');
     return true;
   });
+
+  // Navigate to pathfinder with shopping list
+  const handleFindPath = () => {
+    if (listItems.length > 0) {
+      saveShoppingList(listItems);
+      router.push('/pathfinder');
+    }
+  };
 
   return (
     <>
@@ -165,6 +232,17 @@ export default function ShoppingList() {
               }
               contentContainerStyle={{ paddingBottom: 20 }}
             />
+
+            {/* Find Path Button */}
+            {listItems.length > 0 && (
+              <TouchableOpacity
+                style={styles.findPathButton}
+                onPress={handleFindPath}
+              >
+                <Ionicons name="map" size={24} color="#fff" />
+                <Text style={styles.findPathText}>Find Path</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -339,4 +417,19 @@ const styles = StyleSheet.create({
     gap: 8, // optional, for spacing between icon and text
     marginTop: 20,
   },
+  findPathButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0766AD',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  findPathText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  }
 });

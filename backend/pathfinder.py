@@ -111,32 +111,144 @@ class PathFinder:
         print(f"Selected end node: {best_node}")
         return best_node
 
+    def find_optimal_route(self, start_id, item_list):
+        """Find optimal route through all items in shopping list"""
+        remaining_items = [item for item in item_list if not item.get('checked', False)]
+        if not remaining_items:
+            return []
+
+        current_pos = start_id
+        route_order = []
+        available_nodes = set()
+
+        # Collect all possible destination nodes
+        for item in remaining_items:
+            if item['type'] == 'Product':
+                # Get all stalls selling this product
+                product_id = int(item['id'].replace('p', ''))
+                for stall in self.save_data['stalls'].values():
+                    if product_id in stall['products']:
+                        available_nodes.update(stall['pathNode'])
+            else:
+                # Direct stall location
+                stall_id = int(item['id'].replace('s', ''))
+                stall = self.save_data['stalls'].get(str(stall_id))
+                if stall:
+                    available_nodes.update(stall['pathNode'])
+
+        # Find optimal ordering
+        while available_nodes:
+            min_dist = float('inf')
+            next_node = None
+            
+            for node in available_nodes:
+                path = self.find_path(current_pos, node)
+                if path:
+                    dist = len(path)
+                    if dist < min_dist:
+                        min_dist = dist
+                        next_node = node
+            
+            if next_node:
+                route_order.append(next_node)
+                current_pos = next_node
+                available_nodes.remove(next_node)
+            else:
+                break
+
+        return route_order
+
+    def optimize_shopping_route(self, start_id, shopping_list):
+        """Find optimal route through shopping list items"""
+        # Initialize variables
+        unvisited_items = shopping_list.copy()
+        current_pos = start_id
+        optimal_route = []
+        
+        while unvisited_items:
+            min_cost = float('inf')
+            next_item = None
+            best_path = None
+            
+            # Try each remaining item
+            for item in unvisited_items:
+                if item['type'] == 'Product':
+                    product_id = int(item['id'].replace('p', ''))
+                    end_nodes = self.get_path_nodes_for_product(product_id)
+                else:
+                    stall_id = int(item['id'].replace('s', ''))
+                    stall = self.save_data['stalls'].get(str(stall_id))
+                    end_nodes = stall['pathNode'] if stall else []
+                    
+                # Find closest node for this item
+                for end_node in end_nodes:
+                    path = self.find_path(current_pos, end_node)
+                    if path:
+                        cost = self.calculate_path_cost(path)
+                        if cost < min_cost:
+                            min_cost = cost
+                            next_item = item
+                            best_path = path
+        
+            if next_item:
+                optimal_route.append({
+                    'item': next_item,
+                    'path': best_path
+                })
+                current_pos = best_path[-1]
+                unvisited_items.remove(next_item)
+            else:
+                break
+    
+        return optimal_route
+
 pathfinder = PathFinder()
 
 @app.route('/findpath', methods=['POST'])
 def find_path():
     data = request.json
     start_id = data.get('start')
-    product_id = data.get('product_id')
+    shopping_list = data.get('shopping_list', [])
+    current_index = data.get('current_index', 0)
+
+    if shopping_list and len(shopping_list) > 0:
+        # Get current item from shopping list
+        current_item = shopping_list[current_index]
+        
+        if current_item['type'] == 'Product':
+            product_id = int(current_item['id'].replace('p', ''))
+            possible_end_nodes = pathfinder.get_path_nodes_for_product(product_id)
+        else:
+            # Handle stall directly
+            stall_id = int(current_item['id'].replace('s', ''))
+            stall = pathfinder.save_data['stalls'].get(str(stall_id))
+            possible_end_nodes = stall['pathNode'] if stall else []
+
+        if not possible_end_nodes:
+            return jsonify({'error': 'No path nodes found'}), 404
+
+        end_id = pathfinder.find_closest_path_node(start_id, possible_end_nodes)
+        path = pathfinder.find_path(start_id, end_id)
+        
+        return jsonify({
+            'path': path,
+            'current_item': current_item
+        })
     
+    # Existing single product logic
+    product_id = data.get('product_id')
     if not start_id or not product_id:
         return jsonify({'error': 'Missing start node or product ID'}), 400
-        
-    # Get all possible path nodes for the product
+
     possible_end_nodes = pathfinder.get_path_nodes_for_product(product_id)
-    
     if not possible_end_nodes:
         return jsonify({'error': 'No path nodes found for this product'}), 404
-        
-    # Find the closest accessible path node
+
     end_id = pathfinder.find_closest_path_node(start_id, possible_end_nodes)
-    
     if not end_id:
         return jsonify({'error': 'No reachable path node found'}), 404
-        
-    # Find the path to the closest node
+
     path = pathfinder.find_path(start_id, end_id)
-    
     return jsonify({'path': path})
 
 if __name__ == '__main__':
