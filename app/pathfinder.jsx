@@ -29,6 +29,8 @@ export default function HomeScreen() {
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [fromShoppingList, setFromShoppingList] = useState(false);
   const [isLocationToolActive, setIsLocationToolActive] = useState(false);
+  const [startNodeId, setStartNodeId] = useState(null);
+  const [path, setPath] = useState([]);
   console.log('[Map.js] selectedItem:', selectedItem);
   const router = useRouter();
 
@@ -44,31 +46,52 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading shopping list:', error);
     }
-
-    // Cleanup when unmounting
-    return () => {
-      localStorage.removeItem('shoppingList');
-    };
   }, []);
 
   // Update navigation handlers
+  const updatePathForProduct = async (productId) => {
+    if (!startNodeId) return;
+    
+    try {
+      const response = await fetch('http://localhost:5000/findpath', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          start: startNodeId,
+          product_id: parseInt(productId),
+        }),
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      console.log('Received new path:', data.path);
+      setPath(data.path);
+    } catch (error) {
+      console.error('Error updating path:', error);
+    }
+  };
+
   const handleNext = () => {
-    if (currentItemIndex < shoppingList.length - 1) {
-      const nextIndex = currentItemIndex + 1;
-      const nextItem = shoppingList[nextIndex];
-      setCurrentItemIndex(nextIndex);
-      // Pass the selected item to MapSVG through selectedItem prop
-      setSelectedItem(nextItem);
+    const nextIndex = (currentItemIndex + 1) % shoppingList.length;
+    setCurrentItemIndex(nextIndex);
+    
+    const nextItem = shoppingList[nextIndex];
+    if (nextItem?.type === 'Product') {
+      const productId = nextItem.id.replace('p', '');
+      updatePathForProduct(productId);
     }
   };
 
   const handlePrevious = () => {
-    if (currentItemIndex > 0) {
-      const prevIndex = currentItemIndex - 1;
-      const prevItem = shoppingList[prevIndex];
-      setCurrentItemIndex(prevIndex);
-      // Pass the selected item to MapSVG through selectedItem prop
-      setSelectedItem(prevItem);
+    const prevIndex = (currentItemIndex - 1 + shoppingList.length) % shoppingList.length;
+    setCurrentItemIndex(prevIndex);
+    
+    const prevItem = shoppingList[prevIndex];
+    if (prevItem?.type === 'Product') {
+      const productId = prevItem.id.replace('p', '');
+      updatePathForProduct(productId);
     }
   };
 
@@ -222,9 +245,14 @@ export default function HomeScreen() {
                 height={window.height * 3}
                 selectedItem={shoppingList[currentItemIndex]}
                 isLocationToolActive={isLocationToolActive}
+                fromShoppingList={fromShoppingList}
                 onLocationSet={() => {
                   setIsLocationToolActive(false);  // Just deactivate the tool
                 }}
+                startNodeId={startNodeId}
+                setStartNodeId={setStartNodeId}
+                path={path}
+                setPath={setPath}
               />
             </View>
           </ScrollView>

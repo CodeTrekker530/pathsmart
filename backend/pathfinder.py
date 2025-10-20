@@ -39,14 +39,20 @@ class PathFinder:
         # Find all stalls that sell this product
         for stall_id, stall_data in self.save_data['stalls'].items():
             if product_id in stall_data['products']:
-                print(f"Found product in stall {stall_id} with path nodes {stall_data['pathNode']}")
-                # Make sure to use the correct stall's path nodes
-                if isinstance(stall_data['pathNode'], list):
-                    path_nodes.extend(stall_data['pathNode'])
-                else:
-                    path_nodes.append(stall_data['pathNode'])
+                print(f"Found product in stall {stall_id}")
+                # Get pathNode from stall data - this is the navigation destination
+                if 'pathNode' in stall_data:
+                    if isinstance(stall_data['pathNode'], list):
+                        print(f"Adding path nodes {stall_data['pathNode']} from stall {stall_id}")
+                        # Filter out any empty or None values
+                        path_nodes.extend([node for node in stall_data['pathNode'] if node])
+                    elif stall_data['pathNode']:  # Single node
+                        print(f"Adding path node {stall_data['pathNode']} from stall {stall_id}")
+                        path_nodes.append(stall_data['pathNode'])
         
-        print(f"All possible path nodes: {path_nodes}")
+        # Remove any duplicates
+        path_nodes = list(set(path_nodes))
+        print(f"Final unique path nodes for product {product_id}: {path_nodes}")
         return path_nodes
 
     def find_path(self, start_id, end_id):
@@ -212,17 +218,26 @@ def find_path():
     current_index = data.get('current_index', 0)
 
     if shopping_list and len(shopping_list) > 0:
+        print("\n=== Processing Shopping List Request ===")
+        print(f"Shopping List Length: {len(shopping_list)}")
+        print(f"Current Index: {current_index}")
+        
         # Get current item from shopping list
         current_item = shopping_list[current_index]
+        print(f"Current Item: {current_item}")
         
         if current_item['type'] == 'Product':
             product_id = int(current_item['id'].replace('p', ''))
+            print(f"Processing Product ID: {product_id}")
             possible_end_nodes = pathfinder.get_path_nodes_for_product(product_id)
+            print(f"Found Path Nodes for Product: {possible_end_nodes}")
         else:
             # Handle stall directly
             stall_id = int(current_item['id'].replace('s', ''))
+            print(f"Processing Stall ID: {stall_id}")
             stall = pathfinder.save_data['stalls'].get(str(stall_id))
             possible_end_nodes = stall['pathNode'] if stall else []
+            print(f"Found Path Nodes for Stall: {possible_end_nodes}")
 
         if not possible_end_nodes:
             return jsonify({'error': 'No path nodes found'}), 404

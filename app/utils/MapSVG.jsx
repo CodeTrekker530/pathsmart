@@ -13,28 +13,45 @@ const SELECTED_START_COLOR = '#00ff00';
 const DESTINATION_COLOR = '#0059FF';
 const START_POINT_RADIUS = 20;
 
-const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
+const MapSVG = ({ 
+  selectedItem, 
+  isLocationToolActive, 
+  fromShoppingList: isFromShoppingList, 
+  onLocationSet,
+  startNodeId,
+  setStartNodeId,
+  path,
+  setPath
+}) => {
   const router = useRouter();
-  const { selectedItem: contextSelectedItem } = useSelection();
-  const [startNodeId, setStartNodeId] = useState(null);
-  const [path, setPath] = useState([]);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [routeOrder, setRouteOrder] = useState([]); // Add state for route order
+  // We no longer need routeOrder state
   const [shoppingList, setShoppingList] = useState([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [fromShoppingList, setFromShoppingList] = useState(false);
+  const [fromShoppingList, setFromShoppingList] = useState(isFromShoppingList);
   const [activeNodes, setActiveNodes] = useState([]);
   const [customStartNode, setCustomStartNode] = useState(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const nodes = nodesData.nodes;
 
-  const selectedIds = Array.isArray(contextSelectedItem?.node_id)
-    ? contextSelectedItem.node_id.map(Number)
-    : contextSelectedItem?.node_id
-      ? [Number(contextSelectedItem.node_id)]
-      : [];
+  const [selectedIds, setSelectedIds] = useState([]);
+  
+  // Update selectedIds when selectedItem changes
+  useEffect(() => {
+    if (!selectedItem) {
+      setSelectedIds([]);
+      return;
+    }
+    
+    const ids = Array.isArray(selectedItem.node_id)
+      ? selectedItem.node_id.map(Number)
+      : selectedItem.node_id
+        ? [Number(selectedItem.node_id)]
+        : [];
+    setSelectedIds(ids);
+  }, [selectedItem]);
 
   // Load shopping list when component mounts
   useEffect(() => {
@@ -44,10 +61,13 @@ const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
       const list = JSON.parse(savedList);
       setShoppingList(list);
       console.log('Loaded shopping list:', list);
-      // Set fromShoppingList to true if we have a list
-      setFromShoppingList(!!list?.length);
     }
   }, []); // Run once on mount
+
+  // Update fromShoppingList when prop changes
+  useEffect(() => {
+    setFromShoppingList(isFromShoppingList);
+  }, [isFromShoppingList]);
 
   // Add useEffect to handle initial highlighting when shopping list loads
   useEffect(() => {
@@ -78,49 +98,75 @@ const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
         setActiveNodes([Number(currentItem.node_id)]);
       }
     }
-  }, [fromShoppingList, shoppingList, currentItemIndex]); // Add these dependencies
+  }, [fromShoppingList, shoppingList, currentItemIndex, selectedItem]); // Add selectedItem dependency
 
-  // Update this useEffect to properly handle highlighting changes
+  // Effect for handling highlighting of stalls
   useEffect(() => {
-    if (fromShoppingList && shoppingList && shoppingList.length > 0) {
-      // Get current item from shopping list
-      const currentItem = shoppingList[currentItemIndex];
-      console.log('Current item for highlighting:', currentItem);
+    if (!shoppingList?.length || currentItemIndex >= shoppingList.length) return;
 
-      if (currentItem?.type === 'Product') {
-        // Find all stalls that sell this product
-        const productId = Number(currentItem.id.replace('p', ''));
-        const stallNodes = [];
-        
-        console.log('Looking for product ID:', productId);
-        
-        Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
-          if (stall.products.includes(productId)) {
-            console.log(`Found product ${productId} in stall ${stallId}`);
-            stallNodes.push(...stall.nodes);
-          }
-        });
-        
-        console.log('Setting active nodes for highlighting:', stallNodes);
-        setActiveNodes(stallNodes);
-      } else if (currentItem?.type === 'Stall') {
-        // Direct stall highlighting
-        setActiveNodes([Number(currentItem.node_id)]);
-      }
-    } else if (contextSelectedItem) {
-      // Fall back to single item logic
-      setActiveNodes(selectedIds);
+    const currentItem = shoppingList[currentItemIndex];
+    console.log('Current item for highlighting:', currentItem);
+
+    if (currentItem?.type === 'Product') {
+      const productId = Number(currentItem.id.replace('p', ''));
+      const stallNodes = [];
+      
+      console.log('Looking for product ID:', productId);
+      
+      Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
+        if (stall.products.includes(productId)) {
+          console.log(`Found product ${productId} in stall ${stallId}`);
+          stallNodes.push(...stall.nodes);
+        }
+      });
+      
+      console.log('Setting active nodes for highlighting:', stallNodes);
+      setActiveNodes(stallNodes);
+    } else if (currentItem?.type === 'Stall') {
+      setActiveNodes([Number(currentItem.node_id)]);
     }
-  }, [currentItemIndex, shoppingList, fromShoppingList]); // Note the dependencies
+  }, [currentItemIndex, shoppingList]); // Only depends on current item and list
+
+  // Separate effect for path calculation
+  useEffect(() => {
+    const updatePath = async () => {
+      if (!startNodeId || !shoppingList?.length || currentItemIndex >= shoppingList.length) return;
+
+      const currentItem = shoppingList[currentItemIndex];
+      console.log('=== Path Update Triggered ===');
+      console.log('Updating path for item:', currentItem);
+      
+      try {
+        const response = await fetch('http://localhost:5000/findpath', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            start: startNodeId,
+            shopping_list: shoppingList,
+            current_index: currentItemIndex
+          })
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        console.log('New path received from backend:', data.path);
+        setPath(data.path);
+      } catch (error) {
+        console.error('Error updating path:', error);
+      }
+    };
+
+    updatePath();
+  }, [startNodeId, currentItemIndex, shoppingList?.length]); // Key dependencies for path updates
 
   // Simplified highlighting logic
   const getFill = (id) => {
-    if (!contextSelectedItem) return DEFAULT_COLOR;
+    if (!selectedItem) return DEFAULT_COLOR;
 
     const nodeId = Number(id);
-    if (contextSelectedItem.type === 'Product') {
+    if (selectedItem.type === 'Product') {
       // Find stalls that sell this product
-      const productId = Number(contextSelectedItem.id.replace('p', ''));
+      const productId = Number(selectedItem.id.replace('p', ''));
       const sellingStalls = Object.values(saveData.stalls).filter(stall => 
         stall.products.includes(productId)
       );
@@ -129,9 +175,9 @@ const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
         stall.nodes.includes(nodeId)
       );
       return isStallNode ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-    } else if (contextSelectedItem.type === 'Stall') {
+    } else if (selectedItem.type === 'Stall') {
       // Direct stall highlighting
-      return contextSelectedItem.node_id === nodeId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
+      return selectedItem.node_id === nodeId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
     }
     return DEFAULT_COLOR;
   };
@@ -142,6 +188,11 @@ const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
 
     try {
       if (fromShoppingList && shoppingList && shoppingList.length > 0) {
+        const currentItem = shoppingList[currentItemIndex];
+        console.log('Current item being sent:', currentItem);
+        console.log('Current index:', currentItemIndex);
+        console.log('Shopping list:', shoppingList);
+        
         const response = await fetch('http://localhost:5000/findpath', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -159,9 +210,9 @@ const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
         console.log('Route order:', data.route_order);
         setPath(data.path);
         
-      } else if (contextSelectedItem?.id) {
+      } else if (selectedItem?.id) {
         // Existing single item logic
-        const productId = Number(contextSelectedItem.id.replace('p', ''));
+        const productId = Number(selectedItem.id.replace('p', ''));
         const response = await fetch('http://localhost:5000/findpath', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
