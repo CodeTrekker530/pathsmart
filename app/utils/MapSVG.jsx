@@ -13,7 +13,7 @@ const SELECTED_START_COLOR = '#00ff00';
 const DESTINATION_COLOR = '#0059FF';
 const START_POINT_RADIUS = 20;
 
-const MapSVG = ({ selectedItem }) => {
+const MapSVG = ({ selectedItem, isLocationToolActive, onLocationSet }) => {
   const router = useRouter();
   const { selectedItem: contextSelectedItem } = useSelection();
   const [startNodeId, setStartNodeId] = useState(null);
@@ -26,6 +26,7 @@ const MapSVG = ({ selectedItem }) => {
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [fromShoppingList, setFromShoppingList] = useState(false);
   const [activeNodes, setActiveNodes] = useState([]);
+  const [customStartNode, setCustomStartNode] = useState(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const nodes = nodesData.nodes;
 
@@ -307,14 +308,90 @@ const MapSVG = ({ selectedItem }) => {
     );
   };
 
+  // Add function to find nearest node
+  const findNearestNode = (clickX, clickY) => {
+    let minDistance = Infinity;
+    let nearestNode = null;
+
+    Object.entries(nodes).forEach(([nodeId, node]) => {
+      // Convert SVG coordinates to screen coordinates
+      const dx = node.x - clickX;
+      const dy = node.y - clickY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestNode = parseInt(nodeId);
+      }
+    });
+
+    return nearestNode;
+  };
+
+  // Update handleMapClick
+  const handleMapClick = (e) => {
+    if (!isLocationToolActive) return;
+
+    const svgElement = e.target.ownerSVGElement || e.target;
+    if (!svgElement) return;
+
+    const pt = svgElement.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    
+    const svgP = pt.matrixTransform(svgElement.getScreenCTM().inverse());
+    
+    const nearestNode = findNearestNode(svgP.x, svgP.y);
+    if (nearestNode) {
+      handleStartPointClick(nearestNode);
+      setCustomStartNode(nearestNode);
+      console.log('Set location to node:', nearestNode);
+      // Call the callback to just deactivate the tool
+      onLocationSet();
+    }
+  };
+
+  // Add CustomStartPoint component
+  const CustomStartPoint = ({ nodeId }) => {
+    if (!nodeId || !nodes[nodeId]) return null;
+    
+    const node = nodes[nodeId];
+    return (
+      <G>
+        <Circle
+          cx={node.x}
+          cy={node.y}
+          r={START_POINT_RADIUS}
+          fill="#00ff00"
+          opacity={0.7}
+        />
+        <Circle
+          cx={node.x}
+          cy={node.y}
+          r={START_POINT_RADIUS - 5}
+          fill="white"
+          opacity={0.9}
+        />
+        <Circle
+          cx={node.x}
+          cy={node.y}
+          r={5}
+          fill="#00ff00"
+        />
+      </G>
+    );
+  };
+
+  // Update return JSX to add instruction text and click handler
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isLocationToolActive ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
         userSelect: 'none',
+        position: 'relative',
       }}
       data-map-container
       onWheel={handleWheel}
@@ -322,7 +399,26 @@ const MapSVG = ({ selectedItem }) => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onClick={handleMapClick}
     >
+      {/* Add instruction text */}
+      {isLocationToolActive && (
+        <div style={{
+          position: 'absolute',
+          top: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: 20,
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}>
+          Tap anywhere to set location
+        </div>
+      )}
+
       <Svg
         width="100%"
         height="100%"
@@ -477,9 +573,13 @@ const MapSVG = ({ selectedItem }) => {
         <StartPoint id={207} cx={1316} cy={76}/>
         <StartPoint id={150} cx={1991} cy={611}/>
         <StartPoint id={194} cx={1991} cy={136}/>
+
+        {/* Custom Start Point Indicator */}
+        {customStartNode && <CustomStartPoint nodeId={customStartNode} />}
       </Svg>
     </div>
   );
 };
 
+// Fix the export
 export default MapSVG;
