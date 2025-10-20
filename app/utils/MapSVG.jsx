@@ -13,27 +13,45 @@ const SELECTED_START_COLOR = '#00ff00';
 const DESTINATION_COLOR = '#0059FF';
 const START_POINT_RADIUS = 20;
 
-const MapSVG = ({ selectedItem }) => {
+const MapSVG = ({ 
+  selectedItem, 
+  isLocationToolActive, 
+  fromShoppingList: isFromShoppingList, 
+  onLocationSet,
+  startNodeId,
+  setStartNodeId,
+  path,
+  setPath
+}) => {
   const router = useRouter();
-  const { selectedItem: contextSelectedItem } = useSelection();
-  const [startNodeId, setStartNodeId] = useState(null);
-  const [path, setPath] = useState([]);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [routeOrder, setRouteOrder] = useState([]); // Add state for route order
+  // We no longer need routeOrder state
   const [shoppingList, setShoppingList] = useState([]);
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [fromShoppingList, setFromShoppingList] = useState(false);
+  const [fromShoppingList, setFromShoppingList] = useState(isFromShoppingList);
   const [activeNodes, setActiveNodes] = useState([]);
+  const [customStartNode, setCustomStartNode] = useState(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const nodes = nodesData.nodes;
 
-  const selectedIds = Array.isArray(contextSelectedItem?.node_id)
-    ? contextSelectedItem.node_id.map(Number)
-    : contextSelectedItem?.node_id
-      ? [Number(contextSelectedItem.node_id)]
-      : [];
+  const [selectedIds, setSelectedIds] = useState([]);
+  
+  // Update selectedIds when selectedItem changes
+  useEffect(() => {
+    if (!selectedItem) {
+      setSelectedIds([]);
+      return;
+    }
+    
+    const ids = Array.isArray(selectedItem.node_id)
+      ? selectedItem.node_id.map(Number)
+      : selectedItem.node_id
+        ? [Number(selectedItem.node_id)]
+        : [];
+    setSelectedIds(ids);
+  }, [selectedItem]);
 
   // Load shopping list when component mounts
   useEffect(() => {
@@ -43,10 +61,13 @@ const MapSVG = ({ selectedItem }) => {
       const list = JSON.parse(savedList);
       setShoppingList(list);
       console.log('Loaded shopping list:', list);
-      // Set fromShoppingList to true if we have a list
-      setFromShoppingList(!!list?.length);
     }
   }, []); // Run once on mount
+
+  // Update fromShoppingList when prop changes
+  useEffect(() => {
+    setFromShoppingList(isFromShoppingList);
+  }, [isFromShoppingList]);
 
   // Add useEffect to handle initial highlighting when shopping list loads
   useEffect(() => {
@@ -77,49 +98,98 @@ const MapSVG = ({ selectedItem }) => {
         setActiveNodes([Number(currentItem.node_id)]);
       }
     }
-  }, [fromShoppingList, shoppingList, currentItemIndex]); // Add these dependencies
+  }, [fromShoppingList, shoppingList, currentItemIndex, selectedItem]); // Add selectedItem dependency
 
-  // Update this useEffect to properly handle highlighting changes
+  // Effect for handling highlighting of stalls
   useEffect(() => {
-    if (fromShoppingList && shoppingList && shoppingList.length > 0) {
-      // Get current item from shopping list
-      const currentItem = shoppingList[currentItemIndex];
-      console.log('Current item for highlighting:', currentItem);
+    if (!shoppingList?.length || currentItemIndex >= shoppingList.length) return;
 
-      if (currentItem?.type === 'Product') {
-        // Find all stalls that sell this product
-        const productId = Number(currentItem.id.replace('p', ''));
-        const stallNodes = [];
-        
-        console.log('Looking for product ID:', productId);
-        
-        Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
-          if (stall.products.includes(productId)) {
-            console.log(`Found product ${productId} in stall ${stallId}`);
-            stallNodes.push(...stall.nodes);
-          }
-        });
-        
-        console.log('Setting active nodes for highlighting:', stallNodes);
-        setActiveNodes(stallNodes);
-      } else if (currentItem?.type === 'Stall') {
-        // Direct stall highlighting
-        setActiveNodes([Number(currentItem.node_id)]);
-      }
-    } else if (contextSelectedItem) {
-      // Fall back to single item logic
-      setActiveNodes(selectedIds);
+    const currentItem = shoppingList[currentItemIndex];
+    console.log('Current item for highlighting:', currentItem);
+
+    if (currentItem?.type === 'Product') {
+      const productId = Number(currentItem.id.replace('p', ''));
+      const stallNodes = [];
+      
+      console.log('Looking for product ID:', productId);
+      
+      Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
+        if (stall.products.includes(productId)) {
+          console.log(`Found product ${productId} in stall ${stallId}`);
+          stallNodes.push(...stall.nodes);
+        }
+      });
+      
+      console.log('Setting active nodes for highlighting:', stallNodes);
+      setActiveNodes(stallNodes);
+    } else if (currentItem?.type === 'Stall') {
+      setActiveNodes([Number(currentItem.node_id)]);
     }
-  }, [currentItemIndex, shoppingList, fromShoppingList]); // Note the dependencies
+  }, [currentItemIndex, shoppingList]); // Only depends on current item and list
+
+// Separate effect for path calculation
+  useEffect(() => {
+    const updatePath = async () => {
+      if (!startNodeId) return;
+
+      try {
+        // Shopping list mode
+        if (fromShoppingList && shoppingList?.length && currentItemIndex < shoppingList.length) {
+          const currentItem = shoppingList[currentItemIndex];
+          console.log('=== Path Update Triggered (Shopping List) ===');
+          console.log('Updating path for item:', currentItem);
+          
+          const response = await fetch('http://localhost:5000/findpath', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              start: startNodeId,
+              shopping_list: shoppingList,
+              current_index: currentItemIndex
+            })
+          });
+
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          console.log('New path received from backend:', data.path);
+          setPath(data.path);
+        } 
+        // Single product mode
+        else if (selectedItem?.id) {
+          console.log('=== Path Update Triggered (Single Product) ===');
+          console.log('Updating path for product:', selectedItem.id);
+          
+          const productId = Number(selectedItem.id.replace('p', ''));
+          const response = await fetch('http://localhost:5000/findpath', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              start: startNodeId,
+              product_id: productId
+            })
+          });
+
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          console.log('New path received from backend:', data.path);
+          setPath(data.path);
+        }
+      } catch (error) {
+        console.error('Error updating path:', error);
+      }
+    };
+
+    updatePath();
+  }, [startNodeId, currentItemIndex, shoppingList?.length, selectedItem?.id, fromShoppingList]); // Added selectedItem?.id and fromShoppingList
 
   // Simplified highlighting logic
   const getFill = (id) => {
-    if (!contextSelectedItem) return DEFAULT_COLOR;
+    if (!selectedItem) return DEFAULT_COLOR;
 
     const nodeId = Number(id);
-    if (contextSelectedItem.type === 'Product') {
+    if (selectedItem.type === 'Product') {
       // Find stalls that sell this product
-      const productId = Number(contextSelectedItem.id.replace('p', ''));
+      const productId = Number(selectedItem.id.replace('p', ''));
       const sellingStalls = Object.values(saveData.stalls).filter(stall => 
         stall.products.includes(productId)
       );
@@ -128,55 +198,18 @@ const MapSVG = ({ selectedItem }) => {
         stall.nodes.includes(nodeId)
       );
       return isStallNode ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
-    } else if (contextSelectedItem.type === 'Stall') {
+    } else if (selectedItem.type === 'Stall') {
       // Direct stall highlighting
-      return contextSelectedItem.node_id === nodeId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
+      return selectedItem.node_id === nodeId ? HIGHLIGHT_COLOR : DEFAULT_COLOR;
     }
     return DEFAULT_COLOR;
   };
 
   // Handler for when a start point is clicked
-  const handleStartPointClick = async (nodeId) => {
+  const handleStartPointClick = (nodeId) => {
+    // Just update the start node - the useEffect will handle the path calculation
     setStartNodeId(nodeId);
-
-    try {
-      if (fromShoppingList && shoppingList && shoppingList.length > 0) {
-        const response = await fetch('http://localhost:5000/findpath', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start: nodeId,
-            shopping_list: shoppingList,
-            current_index: currentItemIndex
-          })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        console.log('Path received:', data.path);
-        console.log('Route order:', data.route_order);
-        setPath(data.path);
-        
-      } else if (contextSelectedItem?.id) {
-        // Existing single item logic
-        const productId = Number(contextSelectedItem.id.replace('p', ''));
-        const response = await fetch('http://localhost:5000/findpath', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start: nodeId,
-            product_id: productId
-          })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        setPath(data.path);
-      }
-    } catch (error) {
-      console.error('Error fetching path:', error);
-    }
+    console.log('Start node set to:', nodeId);
   };
 
   // Zoom handler
@@ -307,14 +340,90 @@ const MapSVG = ({ selectedItem }) => {
     );
   };
 
+  // Add function to find nearest node
+  const findNearestNode = (clickX, clickY) => {
+    let minDistance = Infinity;
+    let nearestNode = null;
+
+    Object.entries(nodes).forEach(([nodeId, node]) => {
+      // Convert SVG coordinates to screen coordinates
+      const dx = node.x - clickX;
+      const dy = node.y - clickY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestNode = parseInt(nodeId);
+      }
+    });
+
+    return nearestNode;
+  };
+
+  // Update handleMapClick
+  const handleMapClick = (e) => {
+    if (!isLocationToolActive) return;
+
+    const svgElement = e.target.ownerSVGElement || e.target;
+    if (!svgElement) return;
+
+    const pt = svgElement.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    
+    const svgP = pt.matrixTransform(svgElement.getScreenCTM().inverse());
+    
+    const nearestNode = findNearestNode(svgP.x, svgP.y);
+    if (nearestNode) {
+      handleStartPointClick(nearestNode);
+      setCustomStartNode(nearestNode);
+      console.log('Set location to node:', nearestNode);
+      // Call the callback to just deactivate the tool
+      onLocationSet();
+    }
+  };
+
+  // Add CustomStartPoint component
+  const CustomStartPoint = ({ nodeId }) => {
+    if (!nodeId || !nodes[nodeId]) return null;
+    
+    const node = nodes[nodeId];
+    return (
+      <G>
+        <Circle
+          cx={node.x}
+          cy={node.y}
+          r={START_POINT_RADIUS}
+          fill="#00ff00"
+          opacity={0.7}
+        />
+        <Circle
+          cx={node.x}
+          cy={node.y}
+          r={START_POINT_RADIUS - 5}
+          fill="white"
+          opacity={0.9}
+        />
+        <Circle
+          cx={node.x}
+          cy={node.y}
+          r={5}
+          fill="#00ff00"
+        />
+      </G>
+    );
+  };
+
+  // Update return JSX to add instruction text and click handler
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isLocationToolActive ? 'crosshair' : (isDragging ? 'grabbing' : 'grab'),
         userSelect: 'none',
+        position: 'relative',
       }}
       data-map-container
       onWheel={handleWheel}
@@ -322,7 +431,26 @@ const MapSVG = ({ selectedItem }) => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onClick={handleMapClick}
     >
+      {/* Add instruction text */}
+      {isLocationToolActive && (
+        <div style={{
+          position: 'absolute',
+          top: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          color: 'white',
+          padding: '8px 16px',
+          borderRadius: 20,
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}>
+          Tap anywhere to set location
+        </div>
+      )}
+
       <Svg
         width="100%"
         height="100%"
@@ -477,9 +605,13 @@ const MapSVG = ({ selectedItem }) => {
         <StartPoint id={207} cx={1316} cy={76}/>
         <StartPoint id={150} cx={1991} cy={611}/>
         <StartPoint id={194} cx={1991} cy={136}/>
+
+        {/* Custom Start Point Indicator */}
+        {customStartNode && <CustomStartPoint nodeId={customStartNode} />}
       </Svg>
     </div>
   );
 };
 
+// Fix the export
 export default MapSVG;

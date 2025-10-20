@@ -28,6 +28,9 @@ export default function HomeScreen() {
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [checkedItems, setCheckedItems] = useState(new Set());
   const [fromShoppingList, setFromShoppingList] = useState(false);
+  const [isLocationToolActive, setIsLocationToolActive] = useState(false);
+  const [startNodeId, setStartNodeId] = useState(null);
+  const [path, setPath] = useState([]);
   console.log('[Map.js] selectedItem:', selectedItem);
   const router = useRouter();
 
@@ -43,31 +46,52 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading shopping list:', error);
     }
-
-    // Cleanup when unmounting
-    return () => {
-      localStorage.removeItem('shoppingList');
-    };
   }, []);
 
   // Update navigation handlers
+  const updatePathForProduct = async (productId) => {
+    if (!startNodeId) return;
+    
+    try {
+      const response = await fetch('http://localhost:5000/findpath', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          start: startNodeId,
+          product_id: parseInt(productId),
+        }),
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      console.log('Received new path:', data.path);
+      setPath(data.path);
+    } catch (error) {
+      console.error('Error updating path:', error);
+    }
+  };
+
   const handleNext = () => {
-    if (currentItemIndex < shoppingList.length - 1) {
-      const nextIndex = currentItemIndex + 1;
-      const nextItem = shoppingList[nextIndex];
-      setCurrentItemIndex(nextIndex);
-      // Pass the selected item to MapSVG through selectedItem prop
-      setSelectedItem(nextItem);
+    const nextIndex = (currentItemIndex + 1) % shoppingList.length;
+    setCurrentItemIndex(nextIndex);
+    
+    const nextItem = shoppingList[nextIndex];
+    if (nextItem?.type === 'Product') {
+      const productId = nextItem.id.replace('p', '');
+      updatePathForProduct(productId);
     }
   };
 
   const handlePrevious = () => {
-    if (currentItemIndex > 0) {
-      const prevIndex = currentItemIndex - 1;
-      const prevItem = shoppingList[prevIndex];
-      setCurrentItemIndex(prevIndex);
-      // Pass the selected item to MapSVG through selectedItem prop
-      setSelectedItem(prevItem);
+    const prevIndex = (currentItemIndex - 1 + shoppingList.length) % shoppingList.length;
+    setCurrentItemIndex(prevIndex);
+    
+    const prevItem = shoppingList[prevIndex];
+    if (prevItem?.type === 'Product') {
+      const productId = prevItem.id.replace('p', '');
+      updatePathForProduct(productId);
     }
   };
 
@@ -169,23 +193,40 @@ export default function HomeScreen() {
       <View style={customStyles.mainContainer}>
         {/* Map Container */}
         <View style={customStyles.mapWrapper}>
-          {/* Floor Selection Buttons - Floating */}
-          <View style={customStyles.floatingFloorButtons}>
-            {[1, 2, 3].map((floor) => (
-              <TouchableOpacity
-                key={floor}
-                style={[
-                  customStyles.floorButton,
-                  selectedFloor === floor && customStyles.floorButtonActive
-                ]}
-                onPress={() => setSelectedFloor(floor)}
-              >
-                <Text style={[
-                  customStyles.floorButtonText,
-                  selectedFloor === floor && customStyles.floorButtonTextActive
-                ]}>{floor}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* Floor Selection and Location Tool Buttons - Floating */}
+          <View style={customStyles.floatingButtons}>
+            <View style={customStyles.floatingFloorButtons}>
+              {[1, 2, 3].map((floor) => (
+                <TouchableOpacity
+                  key={floor}
+                  style={[
+                    customStyles.floorButton,
+                    selectedFloor === floor && customStyles.floorButtonActive
+                  ]}
+                  onPress={() => setSelectedFloor(floor)}
+                >
+                  <Text style={[
+                    customStyles.floorButtonText,
+                    selectedFloor === floor && customStyles.floorButtonTextActive
+                  ]}>{floor}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Location Tool Button */}
+            <TouchableOpacity
+              style={[
+                customStyles.toolButton,
+                isLocationToolActive && customStyles.toolButtonActive
+              ]}
+              onPress={() => setIsLocationToolActive(!isLocationToolActive)}
+            >
+              <Ionicons 
+                name="location" 
+                size={24} 
+                color={isLocationToolActive ? "#fff" : "#0766AD"} 
+              />
+            </TouchableOpacity>
           </View>
 
           <ScrollView
@@ -203,6 +244,15 @@ export default function HomeScreen() {
                 width={window.width * 3} 
                 height={window.height * 3}
                 selectedItem={shoppingList[currentItemIndex]}
+                isLocationToolActive={isLocationToolActive}
+                fromShoppingList={fromShoppingList}
+                onLocationSet={() => {
+                  setIsLocationToolActive(false);  // Just deactivate the tool
+                }}
+                startNodeId={startNodeId}
+                setStartNodeId={setStartNodeId}
+                path={path}
+                setPath={setPath}
               />
             </View>
           </ScrollView>
@@ -323,11 +373,15 @@ const customStyles = {
     backgroundColor: '#f5f5f5',
     position: 'relative',
   },
-  floatingFloorButtons: {
+  floatingButtons: {
     position: 'absolute',
     top: 10,
     right: 10,
     zIndex: 100,
+    flexDirection: 'row',
+    gap: 16,
+  },
+  floatingFloorButtons: {
     flexDirection: 'row',
     gap: 8,
   },
@@ -516,5 +570,24 @@ const customStyles = {
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  toolButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ddd',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  toolButtonActive: {
+    backgroundColor: '#0766AD',
+    borderColor: '#0766AD',
   },
 };
