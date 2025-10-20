@@ -127,37 +127,60 @@ const MapSVG = ({
     }
   }, [currentItemIndex, shoppingList]); // Only depends on current item and list
 
-  // Separate effect for path calculation
+// Separate effect for path calculation
   useEffect(() => {
     const updatePath = async () => {
-      if (!startNodeId || !shoppingList?.length || currentItemIndex >= shoppingList.length) return;
+      if (!startNodeId) return;
 
-      const currentItem = shoppingList[currentItemIndex];
-      console.log('=== Path Update Triggered ===');
-      console.log('Updating path for item:', currentItem);
-      
       try {
-        const response = await fetch('http://localhost:5000/findpath', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start: startNodeId,
-            shopping_list: shoppingList,
-            current_index: currentItemIndex
-          })
-        });
+        // Shopping list mode
+        if (fromShoppingList && shoppingList?.length && currentItemIndex < shoppingList.length) {
+          const currentItem = shoppingList[currentItemIndex];
+          console.log('=== Path Update Triggered (Shopping List) ===');
+          console.log('Updating path for item:', currentItem);
+          
+          const response = await fetch('http://localhost:5000/findpath', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              start: startNodeId,
+              shopping_list: shoppingList,
+              current_index: currentItemIndex
+            })
+          });
 
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        console.log('New path received from backend:', data.path);
-        setPath(data.path);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          console.log('New path received from backend:', data.path);
+          setPath(data.path);
+        } 
+        // Single product mode
+        else if (selectedItem?.id) {
+          console.log('=== Path Update Triggered (Single Product) ===');
+          console.log('Updating path for product:', selectedItem.id);
+          
+          const productId = Number(selectedItem.id.replace('p', ''));
+          const response = await fetch('http://localhost:5000/findpath', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              start: startNodeId,
+              product_id: productId
+            })
+          });
+
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const data = await response.json();
+          console.log('New path received from backend:', data.path);
+          setPath(data.path);
+        }
       } catch (error) {
         console.error('Error updating path:', error);
       }
     };
 
     updatePath();
-  }, [startNodeId, currentItemIndex, shoppingList?.length]); // Key dependencies for path updates
+  }, [startNodeId, currentItemIndex, shoppingList?.length, selectedItem?.id, fromShoppingList]); // Added selectedItem?.id and fromShoppingList
 
   // Simplified highlighting logic
   const getFill = (id) => {
@@ -183,52 +206,10 @@ const MapSVG = ({
   };
 
   // Handler for when a start point is clicked
-  const handleStartPointClick = async (nodeId) => {
+  const handleStartPointClick = (nodeId) => {
+    // Just update the start node - the useEffect will handle the path calculation
     setStartNodeId(nodeId);
-
-    try {
-      if (fromShoppingList && shoppingList && shoppingList.length > 0) {
-        const currentItem = shoppingList[currentItemIndex];
-        console.log('Current item being sent:', currentItem);
-        console.log('Current index:', currentItemIndex);
-        console.log('Shopping list:', shoppingList);
-        
-        const response = await fetch('http://localhost:5000/findpath', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start: nodeId,
-            shopping_list: shoppingList,
-            current_index: currentItemIndex
-          })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        console.log('Path received:', data.path);
-        console.log('Route order:', data.route_order);
-        setPath(data.path);
-        
-      } else if (selectedItem?.id) {
-        // Existing single item logic
-        const productId = Number(selectedItem.id.replace('p', ''));
-        const response = await fetch('http://localhost:5000/findpath', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            start: nodeId,
-            product_id: productId
-          })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        setPath(data.path);
-      }
-    } catch (error) {
-      console.error('Error fetching path:', error);
-    }
+    console.log('Start node set to:', nodeId);
   };
 
   // Zoom handler
