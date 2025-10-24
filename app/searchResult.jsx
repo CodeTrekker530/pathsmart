@@ -34,26 +34,14 @@ export default function SearchScreen() {
     Object.entries(saveData.products).forEach(([productId, product]) => {
       if (product.name.toLowerCase().includes(searchLower) || 
           product.category.toLowerCase().includes(searchLower)) {
-        // For each matching product, find stalls that sell it
-        let stallNodes = [];
-        
-        // Browse through all stalls
-        Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
-          // Check if this stall sells the product
-          if (stall.products.includes(Number(productId))) {
-            // Add this stall's nodes to our list
-            stallNodes.push(...stall.nodes);
-          }
-        });
-
         results.push({
           id: `p${productId}`,
           name: product.name,
           category: product.category,
           type: 'Product',
-          node_id: stallNodes, // Only nodes of stalls that sell this specific product
           image: 'image.png'
         });
+        // Remove the node_id and stallNodes logic as it's not used in ShoppingList
       }
     });
 
@@ -172,10 +160,23 @@ export default function SearchScreen() {
             <TouchableOpacity
               style={styles.itemRow}
               onPress={() => {
-                console.log('Tapped item:', item);
-                console.log('Node IDs:', item.node_id);
-                setSelectedItem(item);
-                router.push('/pathfinder'); 
+                // Create a single-item list exactly like shopping list
+                const singleItemList = [{
+                  id: item.id,  // Already has the 'p' prefix from loadData
+                  type: 'Product',
+                  name: item.name,
+                  category: item.category,
+                  image: 'image.png'
+                }];
+                
+                // Set selected item exactly like shopping list
+                setSelectedItem(singleItemList[0]);
+                
+                // Save to localStorage just like shopping list does
+                localStorage.setItem('shoppingList', JSON.stringify(singleItemList));
+                
+                // Navigate exactly like shopping list
+                router.push('/pathfinder');
               }}
             >
               <Image source={imageMap[item.image]} style={styles.itemImage} />
