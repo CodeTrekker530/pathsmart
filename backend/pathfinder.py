@@ -30,29 +30,42 @@ class PathFinder:
         """Get all connected nodes and their distances"""
         return self.connections.get(str(node_id), {})
 
-    def get_path_nodes_for_product(self, product_id):
-        """Get path nodes for all stalls selling this product"""
-        path_nodes = []
-        product_id = int(product_id)
-        
-        print(f"Looking for path nodes for product {product_id}")
-        # Find all stalls that sell this product
+    def get_stall_from_pathnode(self, node_id):
+        """Find which stall a pathNode belongs to"""
         for stall_id, stall_data in self.save_data['stalls'].items():
-            if product_id in stall_data['products']:
-                print(f"Found product in stall {stall_id}")
-                # Get pathNode from stall data - this is the navigation destination
-                if 'pathNode' in stall_data:
-                    if isinstance(stall_data['pathNode'], list):
-                        print(f"Adding path nodes {stall_data['pathNode']} from stall {stall_id}")
-                        # Filter out any empty or None values
-                        path_nodes.extend([node for node in stall_data['pathNode'] if node])
-                    elif stall_data['pathNode']:  # Single node
-                        print(f"Adding path node {stall_data['pathNode']} from stall {stall_id}")
-                        path_nodes.append(stall_data['pathNode'])
+            if node_id in stall_data.get('pathNode', []):
+                return stall_id
+        return None
+
+    def get_path_nodes_for_item(self, item_id, item_type='Product', exclude_nodes=None):
+        """Get path nodes for a product or stall, excluding certain nodes
+        Args:
+            item_id: The ID of the product or stall
+            item_type: Either 'Product' or 'Stall'
+            exclude_nodes: Set of nodes to exclude
+        """
+        path_nodes = []
+        item_id = int(item_id)
+        exclude_nodes = exclude_nodes or set()
         
+        if item_type == 'Product':
+            print(f"Looking for path nodes for product {item_id}")
+            # Find all stalls that sell this product
+            for stall_id, stall_data in self.save_data['stalls'].items():
+                if 'products' in stall_data and item_id in stall_data['products']:
+                    # Add all path nodes for this stall that aren't excluded
+                    stall_nodes = stall_data.get('pathNode', [])
+                    path_nodes.extend([node for node in stall_nodes if node not in exclude_nodes])
+        else:
+            print(f"Looking for path nodes for stall {item_id}")
+            stall = self.save_data['stalls'].get(str(item_id))
+            if stall:
+                stall_nodes = stall.get('pathNode', [])
+                path_nodes.extend([node for node in stall_nodes if node not in exclude_nodes])
+
         # Remove any duplicates
         path_nodes = list(set(path_nodes))
-        print(f"Final unique path nodes for product {product_id}: {path_nodes}")
+        print(f"Final unique path nodes for {item_type} {item_id}: {path_nodes}")
         return path_nodes
 
     def find_path(self, start_id, end_id):
@@ -178,13 +191,8 @@ class PathFinder:
             
             # Try each remaining item
             for item in unvisited_items:
-                if item['type'] == 'Product':
-                    product_id = int(item['id'].replace('p', ''))
-                    end_nodes = self.get_path_nodes_for_product(product_id)
-                else:
-                    stall_id = int(item['id'].replace('s', ''))
-                    stall = self.save_data['stalls'].get(str(stall_id))
-                    end_nodes = stall['pathNode'] if stall else []
+                item_id = int(item['id'].replace('p' if item['type'] == 'Product' else 's', ''))
+                end_nodes = self.get_path_nodes_for_item(item_id, item['type'])
                     
                 # Find closest node for this item
                 for end_node in end_nodes:
@@ -208,6 +216,32 @@ class PathFinder:
     
         return optimal_route
 
+    def get_next_path_node(self, start_id, current_stall_id, possible_end_nodes, visited_nodes):
+        """Find the next best pathNode, excluding nodes from current stall and already visited nodes
+        Args:
+            start_id: Current position node ID
+            current_stall_id: ID of the current stall to exclude
+            possible_end_nodes: List of all possible destination nodes
+            visited_nodes: List of nodes that have already been visited
+        Returns:
+            Next best pathNode ID, or None if no more available
+        """
+        # Get current stall's pathNodes to exclude them
+        current_stall = self.save_data['stalls'].get(str(current_stall_id))
+        excluded_nodes = set(current_stall.get('pathNode', []) if current_stall else [])
+        
+        # Add visited nodes to excluded nodes
+        excluded_nodes.update(visited_nodes)
+        
+        # Filter out excluded nodes
+        available_nodes = [node for node in possible_end_nodes if node not in excluded_nodes]
+        
+        if not available_nodes:
+            return None
+            
+        # Find the closest node from the remaining available nodes
+        return self.find_closest_path_node(start_id, available_nodes)
+
 pathfinder = PathFinder()
 
 @app.route('/findpath', methods=['POST'])
@@ -216,55 +250,40 @@ def find_path():
     start_id = data.get('start')
     shopping_list = data.get('shopping_list', [])
     current_index = data.get('current_index', 0)
+    exclude_nodes = set(data.get('exclude_nodes', []))
+
+    if not start_id:
+        return jsonify({'error': 'Missing start node'}), 400
 
     if shopping_list and len(shopping_list) > 0:
-        print("\n=== Processing Shopping List Request ===")
-        print(f"Shopping List Length: {len(shopping_list)}")
-        print(f"Current Index: {current_index}")
-        
-        # Get current item from shopping list
         current_item = shopping_list[current_index]
-        print(f"Current Item: {current_item}")
+        
+        # Find which stall the start_id belongs to (if any)
+        current_stall_id = pathfinder.get_stall_from_pathnode(start_id)
+        if current_stall_id:
+            # Get all pathNodes from current stall and add to exclude_nodes
+            current_stall = pathfinder.save_data['stalls'].get(str(current_stall_id))
+            exclude_nodes.update(current_stall.get('pathNode', []))
         
         if current_item['type'] == 'Product':
-            product_id = int(current_item['id'].replace('p', ''))
-            print(f"Processing Product ID: {product_id}")
-            possible_end_nodes = pathfinder.get_path_nodes_for_product(product_id)
-            print(f"Found Path Nodes for Product: {possible_end_nodes}")
-        else:
-            # Handle stall directly
-            stall_id = int(current_item['id'].replace('s', ''))
-            print(f"Processing Stall ID: {stall_id}")
-            stall = pathfinder.save_data['stalls'].get(str(stall_id))
-            possible_end_nodes = stall['pathNode'] if stall else []
-            print(f"Found Path Nodes for Stall: {possible_end_nodes}")
+            item_id = int(current_item['id'].replace('p', ''))
+            possible_end_nodes = pathfinder.get_path_nodes_for_item(
+                item_id, 
+                'Product', 
+                exclude_nodes
+            )
+            
+            if not possible_end_nodes:
+                return jsonify({'error': 'No more available nodes'}), 404
 
-        if not possible_end_nodes:
-            return jsonify({'error': 'No path nodes found'}), 404
+            end_id = pathfinder.find_closest_path_node(start_id, possible_end_nodes)
+            if not end_id:
+                return jsonify({'error': 'No reachable path node found'}), 404
 
-        end_id = pathfinder.find_closest_path_node(start_id, possible_end_nodes)
-        path = pathfinder.find_path(start_id, end_id)
-        
-        return jsonify({
-            'path': path,
-            'current_item': current_item
-        })
-    
-    # Existing single product logic
-    product_id = data.get('product_id')
-    if not start_id or not product_id:
-        return jsonify({'error': 'Missing start node or product ID'}), 400
+            path = pathfinder.find_path(start_id, end_id)
+            return jsonify({'path': path})
 
-    possible_end_nodes = pathfinder.get_path_nodes_for_product(product_id)
-    if not possible_end_nodes:
-        return jsonify({'error': 'No path nodes found for this product'}), 404
-
-    end_id = pathfinder.find_closest_path_node(start_id, possible_end_nodes)
-    if not end_id:
-        return jsonify({'error': 'No reachable path node found'}), 404
-
-    path = pathfinder.find_path(start_id, end_id)
-    return jsonify({'path': path})
+    return jsonify({'error': 'Invalid request'}), 400
 
 if __name__ == '__main__':
     print("PathFinder initialized. Loading data files...")

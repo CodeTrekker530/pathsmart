@@ -30,7 +30,10 @@ export default function HomeScreen() {
   const [fromShoppingList, setFromShoppingList] = useState(false);
   const [isLocationToolActive, setIsLocationToolActive] = useState(false);
   const [startNodeId, setStartNodeId] = useState(null);
+  const [currentStallId, setCurrentStallId] = useState(null);
   const [path, setPath] = useState([]);
+  const [visitedNodes, setVisitedNodes] = useState(new Set());
+  const [previousEndNodes, setPreviousEndNodes] = useState(new Set());
   console.log('[Map.js] selectedItem:', selectedItem);
   const router = useRouter();
 
@@ -106,6 +109,23 @@ export default function HomeScreen() {
     setCheckedItems(newChecked);
   };
 
+  // Reset visited nodes when changing items
+  useEffect(() => {
+    setVisitedNodes(new Set());
+  }, [currentItemIndex]);
+
+  const handleTryNextStore = () => {
+    // Store current end node
+    const currentEndNode = path[path.length - 1];
+    if (!currentEndNode) return;
+    
+    // Add current end node to previous end nodes to prevent loops
+    setPreviousEndNodes(prev => new Set([...prev, currentEndNode]));
+
+    // Update start node - this will trigger the path calculation in MapSVG
+    setStartNodeId(currentEndNode);
+  };
+
   // Update shopping list render to show loaded items
   const renderShoppingList = () => {
     if (shoppingList.length === 0) return null;
@@ -165,6 +185,46 @@ export default function HomeScreen() {
       </View>
     );
   };
+
+  // Update the useEffect that handles path updates
+  useEffect(() => {
+    const updatePath = async () => {
+      if (!startNodeId) return;
+      
+      try {
+        const response = await fetch('http://localhost:5000/findpath', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            start: startNodeId,
+            shopping_list: shoppingList,
+            current_index: currentItemIndex,
+            current_stall_id: currentStallId,
+            visited_nodes: Array.from(visitedNodes),
+            exclude_nodes: Array.from(previousEndNodes)  // Add this
+          }),
+        });
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            alert('No more stores available for this product');
+            return;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Received new path:', data.path);
+        setPath(data.path);
+        setCurrentStallId(data.current_stall);
+      } catch (error) {
+        console.error('Error updating path:', error);
+      }
+    };
+
+    updatePath();
+  }, [startNodeId, currentItemIndex, shoppingList?.length, visitedNodes, previousEndNodes]); // Add visitedNodes to dependencies
 
   return (
     <View style={{ flex: 1 }}>
@@ -319,7 +379,6 @@ export default function HomeScreen() {
                       disabled={currentItemIndex === 0}
                     >
                       <Ionicons name="chevron-back" size={24} color="#0766AD" />
-                      <Text style={customStyles.navButtonText}>Previous</Text>
                     </TouchableOpacity>
                     
                     <View style={customStyles.productCounter}>
@@ -336,20 +395,29 @@ export default function HomeScreen() {
                       onPress={handleNext}
                       disabled={currentItemIndex === shoppingList.length - 1}
                     >
-                      <Text style={customStyles.navButtonText}>Next</Text>
                       <Ionicons name="chevron-forward" size={24} color="#0766AD" />
                     </TouchableOpacity>
                   </View>
 
-                  {/* Next Store Button */}
-                  <TouchableOpacity style={customStyles.nextStoreButton}>
-                    <Ionicons name="storefront-outline" size={20} color="white" />
-                    <Text style={customStyles.nextStoreText}>Try Next Store</Text>
-                  </TouchableOpacity>
-                </View>
+                  {/* Store Buttons Container */}
+                  <View style={customStyles.storeButtonsContainer}>
+                    <TouchableOpacity 
+                      style={customStyles.nextStoreButton}
+                      onPress={handleTryNextStore}  // Add this line
+                    >
+                      <Ionicons name="storefront-outline" size={20} color="white" />
+                      <Text style={customStyles.nextStoreText}>Try Next Store</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[customStyles.nextStoreButton, { backgroundColor: '#609966' }]}>
+                      <Ionicons name="checkmark-circle-outline" size={20} color="white" />
+                      <Text style={customStyles.nextStoreText}>Item Found</Text>
+                    </TouchableOpacity>
+                  </View>
 
             {/* Product List Accordion */}
             {renderShoppingList()}
+          </View>
           </View>
         </ScrollView>
       </View>
@@ -502,11 +570,6 @@ const customStyles = {
     backgroundColor: '#f0f0f0',
     borderColor: '#ddd',
   },
-  navButtonText: {
-    fontSize: 14,
-    color: '#0766AD',
-    fontWeight: '600',
-  },
   productCounter: {
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -519,11 +582,12 @@ const customStyles = {
     color: '#0766AD',
   },
   nextStoreButton: {
+    flex: 1, // Added to make buttons take equal width
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#609966',
-    paddingHorizontal: 12,
+    backgroundColor: '#0766AD',
+    paddingHorizontal: 20, // Increased from 12 to 20
     paddingVertical: 8,
     borderRadius: 6,
     gap: 8,
@@ -589,5 +653,11 @@ const customStyles = {
   toolButtonActive: {
     backgroundColor: '#0766AD',
     borderColor: '#0766AD',
+  },
+  storeButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 4, // Reduced from 10 to 4
+    marginTop: 10,
   },
 };

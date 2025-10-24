@@ -406,9 +406,9 @@
       "pathNode": []
     },
     "57": {
-      "name": "General Store 5",
+      "name": "Services Hub",
       "nodes": [57],
-      "products": [5, 9, 24],
+      "products": [31, 32, 33],
       "pathNode": [131]
     }
   }

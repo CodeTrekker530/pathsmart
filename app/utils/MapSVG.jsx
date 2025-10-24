@@ -35,6 +35,7 @@ const MapSVG = ({
   const [customStartNode, setCustomStartNode] = useState(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const nodes = nodesData.nodes;
+  const isManualUpdate = useRef(false);  // Add this line
 
   const [selectedIds, setSelectedIds] = useState([]);
   
@@ -129,6 +130,12 @@ const MapSVG = ({
 
 // Separate effect for path calculation
   useEffect(() => {
+    // Skip if this is a manual update from handleTryNextStore
+    if (isManualUpdate.current) {
+      isManualUpdate.current = false;
+      return;
+    }
+    
     const updatePath = async () => {
       if (!startNodeId) return;
 
@@ -154,19 +161,26 @@ const MapSVG = ({
           console.log('New path received from backend:', data.path);
           setPath(data.path);
         } 
-        // Single product mode
+        // Single item mode (product or stall)
         else if (selectedItem?.id) {
-          console.log('=== Path Update Triggered (Single Product) ===');
-          console.log('Updating path for product:', selectedItem.id);
+          console.log('=== Path Update Triggered (Single Item) ===');
+          console.log('Updating path for item:', selectedItem);
           
-          const productId = Number(selectedItem.id.replace('p', ''));
+          const id = selectedItem.id;
+          const isStall = id.startsWith('s');
+          const itemId = Number(id.replace(isStall ? 's' : 'p', ''));
+          
+          const payload = {
+            start: startNodeId,
+            [isStall ? 'stall_id' : 'product_id']: itemId
+          };
+          
+          console.log('Sending request with payload:', payload);
+          
           const response = await fetch('http://localhost:5000/findpath', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              start: startNodeId,
-              product_id: productId
-            })
+            body: JSON.stringify(payload)
           });
 
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -180,7 +194,7 @@ const MapSVG = ({
     };
 
     updatePath();
-  }, [startNodeId, currentItemIndex, shoppingList?.length, selectedItem?.id, fromShoppingList]); // Added selectedItem?.id and fromShoppingList
+  }, [startNodeId, currentItemIndex, shoppingList?.length, selectedItem?.id, fromShoppingList]);
 
   // Simplified highlighting logic
   const getFill = (id) => {
@@ -205,9 +219,9 @@ const MapSVG = ({
     return DEFAULT_COLOR;
   };
 
-  // Handler for when a start point is clicked
+// Handler for when a start point is clicked
   const handleStartPointClick = (nodeId) => {
-    // Just update the start node - the useEffect will handle the path calculation
+    isManualUpdate.current = true;  // Set flag before updating
     setStartNodeId(nodeId);
     console.log('Start node set to:', nodeId);
   };
