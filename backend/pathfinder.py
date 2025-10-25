@@ -26,6 +26,13 @@ class PathFinder:
         with open(os.path.join(app_dir, 'saveData.json')) as f:
             self.save_data = json.load(f)
 
+        self.reset_state()  # Add this to initialize state
+
+    def reset_state(self):
+        """Reset all pathfinding state"""
+        self.visited_stalls = set()
+        self.excluded_end_nodes = set()
+
     def get_neighbors(self, node_id):
         """Get all connected nodes and their distances"""
         return self.connections.get(str(node_id), {})
@@ -49,24 +56,17 @@ class PathFinder:
         exclude_nodes = exclude_nodes or set()
         
         if item_type == 'Product':
-            print(f"Looking for path nodes for product {item_id}")
-            # Find all stalls that sell this product
             for stall_id, stall_data in self.save_data['stalls'].items():
                 if 'products' in stall_data and item_id in stall_data['products']:
-                    # Add all path nodes for this stall that aren't excluded
                     stall_nodes = stall_data.get('pathNode', [])
                     path_nodes.extend([node for node in stall_nodes if node not in exclude_nodes])
         else:
-            print(f"Looking for path nodes for stall {item_id}")
             stall = self.save_data['stalls'].get(str(item_id))
             if stall:
                 stall_nodes = stall.get('pathNode', [])
                 path_nodes.extend([node for node in stall_nodes if node not in exclude_nodes])
 
-        # Remove any duplicates
-        path_nodes = list(set(path_nodes))
-        print(f"Final unique path nodes for {item_type} {item_id}: {path_nodes}")
-        return path_nodes
+        return list(set(path_nodes))
 
     def find_path(self, start_id, end_id):
         """A* pathfinding implementation"""
@@ -104,30 +104,22 @@ class PathFinder:
         return path if path[0] == start_id else []
 
     def find_closest_path_node(self, start_id, possible_end_nodes):
-        """Find the closest accessible path node from the list"""
         if not possible_end_nodes:
             return None
             
         min_cost = float('inf')
         best_node = None
         
-        # Debug print
-        print(f"Finding closest path node from {possible_end_nodes} to start node {start_id}")
-        
         for end_node in possible_end_nodes:
-            # Try to find a path to this end node
             path = self.find_path(start_id, end_node)
-            if path:  # If path exists
-                # Calculate total path cost
+            if path:
                 cost = 0
                 for i in range(len(path) - 1):
                     cost += float(self.get_neighbors(path[i])[str(path[i + 1])])
-                print(f"Path to node {end_node} costs {cost}")
                 if cost < min_cost:
                     min_cost = cost
                     best_node = end_node
     
-        print(f"Selected end node: {best_node}")
         return best_node
 
     def find_optimal_route(self, start_id, item_list):
@@ -247,10 +239,27 @@ pathfinder = PathFinder()
 @app.route('/findpath', methods=['POST'])
 def find_path():
     data = request.json
+    
+    # Handle reset request first
+    if data.get('reset'):
+        pathfinder.reset_state()
+        print("\n=== Pathfinding Reset ===")
+        print("All states cleared")
+        return jsonify({'status': 'reset successful'}), 200
+
+    data = request.json
     start_id = data.get('start')
     shopping_list = data.get('shopping_list', [])
     current_index = data.get('current_index', 0)
-    exclude_nodes = set(data.get('exclude_nodes', []))
+    reset = data.get('reset', False)
+
+    if reset:
+        pathfinder.excluded_end_nodes.clear()
+        return jsonify({'status': 'reset successful'}), 200
+
+    print("\n=== Path Finding ===")
+    print(f"Start node: {start_id}")
+    print(f"Currently excluded nodes: {pathfinder.excluded_end_nodes}")
 
     if not start_id:
         return jsonify({'error': 'Missing start node'}), 400
@@ -258,30 +267,55 @@ def find_path():
     if shopping_list and len(shopping_list) > 0:
         current_item = shopping_list[current_index]
         
-        # Find which stall the start_id belongs to (if any)
-        current_stall_id = pathfinder.get_stall_from_pathnode(start_id)
-        if current_stall_id:
-            # Get all pathNodes from current stall and add to exclude_nodes
-            current_stall = pathfinder.save_data['stalls'].get(str(current_stall_id))
-            exclude_nodes.update(current_stall.get('pathNode', []))
-        
         if current_item['type'] == 'Product':
             item_id = int(current_item['id'].replace('p', ''))
-            possible_end_nodes = pathfinder.get_path_nodes_for_item(
-                item_id, 
-                'Product', 
-                exclude_nodes
-            )
             
-            if not possible_end_nodes:
+            # First get all stalls that sell this product
+            valid_stalls = {}
+            for stall_id, stall_data in pathfinder.save_data['stalls'].items():
+                if 'products' in stall_data and item_id in stall_data['products']:
+                    valid_stalls[stall_id] = stall_data
+
+            # Get possible end nodes only from valid stalls
+            possible_end_nodes = []
+            for stall_data in valid_stalls.values():
+                possible_end_nodes.extend(stall_data.get('pathNode', []))
+            
+            # Filter out excluded end nodes
+            available_end_nodes = [node for node in possible_end_nodes 
+                                 if node not in pathfinder.excluded_end_nodes]
+            
+            if not available_end_nodes:
                 return jsonify({'error': 'No more available nodes'}), 404
 
-            end_id = pathfinder.find_closest_path_node(start_id, possible_end_nodes)
+            # Find closest available end node
+            end_id = pathfinder.find_closest_path_node(start_id, available_end_nodes)
+
             if not end_id:
                 return jsonify({'error': 'No reachable path node found'}), 404
 
+            # Find path
             path = pathfinder.find_path(start_id, end_id)
-            return jsonify({'path': path})
+            
+            print("\n=== Generated Path ===")
+            print(f"Path sequence: {' -> '.join(map(str, path))}")
+            
+            # Find which valid stall this end node belongs to
+            destination_stall = None
+            for stall_id, stall_data in valid_stalls.items():
+                if end_id in stall_data.get('pathNode', []):
+                    destination_stall = stall_id
+                    stall_pathnodes = stall_data.get('pathNode', [])
+                    print(f"Destination stall {stall_id} pathNodes: {stall_pathnodes}")
+                    pathfinder.excluded_end_nodes.update(stall_pathnodes)
+                    break
+
+            print(f"Updated excluded nodes: {pathfinder.excluded_end_nodes}\n")
+
+            return jsonify({
+                'path': path,
+                'current_stall': destination_stall
+            })
 
     return jsonify({'error': 'Invalid request'}), 400
 

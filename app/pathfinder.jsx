@@ -34,6 +34,8 @@ export default function HomeScreen() {
   const [path, setPath] = useState([]);
   const [visitedNodes, setVisitedNodes] = useState(new Set());
   const [previousEndNodes, setPreviousEndNodes] = useState(new Set());
+  // Add this state for excluded end nodes
+  const [excludedEndNodes, setExcludedEndNodes] = useState(new Set());
   console.log('[Map.js] selectedItem:', selectedItem);
   const router = useRouter();
 
@@ -50,6 +52,43 @@ export default function HomeScreen() {
       console.error('Error loading shopping list:', error);
     }
   }, []);
+
+  // Add this function to reset pathfinding state
+  const resetPathfinding = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/findpath', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reset: true
+        }),
+      });
+      
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      
+      // Clear local state
+      setPath([]);
+      setStartNodeId(null);
+      setCurrentStallId(null);
+      setExcludedEndNodes(new Set());
+      
+    } catch (error) {
+      console.error('Error resetting pathfinding:', error);
+    }
+  };
+
+  // Reset on component mount/unmount
+  useEffect(() => {
+    resetPathfinding();
+    return () => resetPathfinding(); // Cleanup on unmount
+  }, []);
+
+  // Reset when changing items in shopping list
+  useEffect(() => {
+    resetPathfinding();
+  }, [currentItemIndex]);
 
   // Update navigation handlers
   const updatePathForProduct = async (productId) => {
@@ -77,6 +116,7 @@ export default function HomeScreen() {
   };
 
   const handleNext = () => {
+    resetPathfinding();
     const nextIndex = (currentItemIndex + 1) % shoppingList.length;
     setCurrentItemIndex(nextIndex);
     
@@ -88,6 +128,7 @@ export default function HomeScreen() {
   };
 
   const handlePrevious = () => {
+    resetPathfinding();
     const prevIndex = (currentItemIndex - 1 + shoppingList.length) % shoppingList.length;
     setCurrentItemIndex(prevIndex);
     
@@ -115,14 +156,13 @@ export default function HomeScreen() {
   }, [currentItemIndex]);
 
   const handleTryNextStore = () => {
-    // Store current end node
     const currentEndNode = path[path.length - 1];
-    if (!currentEndNode) return;
+    if (!currentEndNode || !currentStallId) return;
     
-    // Add current end node to previous end nodes to prevent loops
-    setPreviousEndNodes(prev => new Set([...prev, currentEndNode]));
-
-    // Update start node - this will trigger the path calculation in MapSVG
+    // Add current end node to excluded nodes
+    setExcludedEndNodes(prev => new Set([...prev, currentEndNode]));
+    
+    // Update start node to trigger path update
     setStartNodeId(currentEndNode);
   };
 
@@ -202,8 +242,7 @@ export default function HomeScreen() {
             shopping_list: shoppingList,
             current_index: currentItemIndex,
             current_stall_id: currentStallId,
-            visited_nodes: Array.from(visitedNodes),
-            exclude_nodes: Array.from(previousEndNodes)  // Add this
+            excluded_end_nodes: Array.from(excludedEndNodes)  // Send excluded end nodes
           }),
         });
         
@@ -224,7 +263,7 @@ export default function HomeScreen() {
     };
 
     updatePath();
-  }, [startNodeId, currentItemIndex, shoppingList?.length, visitedNodes, previousEndNodes]); // Add visitedNodes to dependencies
+  }, [startNodeId, currentItemIndex, shoppingList?.length]); // excludedEndNodes not in dependencies
 
   return (
     <View style={{ flex: 1 }}>
