@@ -2,6 +2,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter, useSegments } from "expo-router";
 import Cookies from "js-cookie";
+import { supabase } from "../../backend/supabaseClient";
+import bcrypt from "bcryptjs";
 
 const AuthContext = createContext();
 
@@ -41,28 +43,51 @@ export function AuthProvider({ children }) {
       // Unauthenticated user trying to access protected routes
       router.replace("/screens/loginScreen");
     } // ...existing code...
-else if (user && inAuthGroup) {
-  // Authenticated user trying to access login screen
-  const dashboardRoute = getDashboardRoute(user.userType);
-  router.replace(dashboardRoute);
-}
-// ...existing code...
-     else if (!user && segments.length === 0) {
+    else if (user && inAuthGroup) {
+      // Authenticated user trying to access login screen
+      const dashboardRoute = getDashboardRoute(user.userType);
+      router.replace(dashboardRoute);
+    }
+    // ...existing code...
+    else if (!user && segments.length === 0) {
       // init screen for unauthenticated users
       router.replace("/");
     }
   }, [user, segments, loading, router]);
 
   // Save user to cookies on login
-  const login = userData => {
-    console.log("Login successful, user data:", userData);
+  const login = async (username, password, userType) => {
+    const table =
+      userType === "MEPO employee"
+        ? "mepo_employee_account"
+        : "stall_owner_account";
+
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq("username", username)
+      .single();
+
+    if (error || !data) {
+      console.error("Invalid credentials");
+      return null;
+    }
+
+    const passwordMatch = await bcrypt.compare(password, data.password);
+    if (!passwordMatch) {
+      console.error("Password mismatch");
+      return null;
+    }
+
+    const userData = { ...data, userType };
     setUser(userData);
     Cookies.set("user", JSON.stringify(userData), {
-      expires: 7, // 7 days
+      expires: 7,
       secure: true,
-      httpOnly: false,
-      sameSite: "strict", // CSRF protection
+      sameSite: "strict",
     });
+
+    return userData;
   };
 
   // Remove user from cookies on logout

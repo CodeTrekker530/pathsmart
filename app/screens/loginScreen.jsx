@@ -34,47 +34,25 @@ export default function LoginPage() {
     );
   }
 
-  const handleLogin = async (username, password) => {
+  const handleLogin = async () => {
     if (!userType) {
       alert("Please select a user type.");
       return;
     }
     if (!username || !password) {
-      alert("Username and password are required fields");
+      alert("Username and password are required.");
       return;
     }
 
     setLoginLoading(true);
-
     try {
-      // Choose table based on userType
-      const table =
-        userType === "MEPO employee"
-          ? "mepo_employee_account"
-          : "stall_owner_account";
-
-      // Query for the user in the selected table
-      const { data, error } = await supabase
-        .from(table)
-        .select("*")
-        .eq("username", username)
-        .single();
-
-      if (error || !data) {
-        alert(
-          `Invalid credentials for ${userType}. Please check your username, password, and selected user type.`
-        );
-        return;
+      const result = await login(username, password, userType);
+      if (!result) {
+        alert("Invalid credentials. Please try again.");
       }
-      const passwordMatch = await bcrypt.compare(password, data.password);
-      if (passwordMatch) {
-        login({ ...data, userType });
-      } else {
-        alert("Invalid username or password");
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      alert("An error occurred during login. Please try again.");
+    } catch (err) {
+      console.error("Login error:", err);
+      alert("Something went wrong during login.");
     } finally {
       setLoginLoading(false);
     }
