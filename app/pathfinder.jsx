@@ -352,6 +352,7 @@ export default function HomeScreen() {
                 setStartNodeId={setStartNodeId}
                 path={path}
                 setPath={setPath}
+                resetPath={resetPathfinding}
               />
             </View>
           </ScrollView>
