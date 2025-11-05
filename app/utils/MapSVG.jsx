@@ -1,10 +1,8 @@
 /* eslint-disable prettier/prettier */
-import { Svg, Path, Rect, G, Line, Circle, Text } from 'react-native-svg';
-import { useSelection } from '../context/SelectionContext';
-import React, { useState, useRef, useEffect } from 'react';
+import { Svg, Path, G, Line, Circle, Text } from 'react-native-svg';
+import React, { useState, useRef } from 'react';
 import nodesData from './f1nodes.json';
 import saveData from './saveData.json'; // Add this line to import saveData
-import { useRouter } from 'expo-router';
 
 const HIGHLIGHT_COLOR = '#609966';
 const DEFAULT_COLOR = '#D9D9D9';
@@ -24,178 +22,12 @@ const MapSVG = ({
   setPath,
   resetPath
 }) => {
-  const router = useRouter();
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  // We no longer need routeOrder state
-  const [shoppingList, setShoppingList] = useState([]);
-  const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [fromShoppingList, setFromShoppingList] = useState(isFromShoppingList);
-  const [activeNodes, setActiveNodes] = useState([]);
   const [customStartNode, setCustomStartNode] = useState(null);
   const dragStart = useRef({ x: 0, y: 0 });
   const nodes = nodesData.nodes;
-  const isManualUpdate = useRef(false);  // Add this line
-
-  const [selectedIds, setSelectedIds] = useState([]);
-  
-  // Update selectedIds when selectedItem changes
-  useEffect(() => {
-    if (!selectedItem) {
-      setSelectedIds([]);
-      return;
-    }
-    
-    const ids = Array.isArray(selectedItem.node_id)
-      ? selectedItem.node_id.map(Number)
-      : selectedItem.node_id
-        ? [Number(selectedItem.node_id)]
-        : [];
-    setSelectedIds(ids);
-  }, [selectedItem]);
-
-  // Load shopping list when component mounts
-  useEffect(() => {
-    // Load shopping list
-    const savedList = localStorage.getItem('shoppingList');
-    if (savedList) {
-      const list = JSON.parse(savedList);
-      setShoppingList(list);
-      console.log('Loaded shopping list:', list);
-    }
-  }, []); // Run once on mount
-
-  // Update fromShoppingList when prop changes
-  useEffect(() => {
-    setFromShoppingList(isFromShoppingList);
-  }, [isFromShoppingList]);
-
-  // Add useEffect to handle initial highlighting when shopping list loads
-  useEffect(() => {
-    if (fromShoppingList && shoppingList && shoppingList.length > 0) {
-      // Get first item in shopping list
-      const currentItem = shoppingList[currentItemIndex];
-      console.log('Current item from shopping list:', currentItem);
-
-      if (currentItem?.type === 'Product') {
-        // Find all stalls that sell this product
-        const productId = Number(currentItem.id.replace('p', ''));
-        const stallNodes = [];
-        
-        console.log('Looking for product ID:', productId);
-        
-        Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
-          if (stall.products.includes(productId)) {
-            console.log(`Found product ${productId} in stall ${stallId}`);
-            console.log('Stall nodes:', stall.nodes);
-            stallNodes.push(...stall.nodes);
-          }
-        });
-        
-        console.log('Setting active nodes:', stallNodes);
-        setActiveNodes(stallNodes);
-      } else if (currentItem?.type === 'Stall') {
-        // Direct stall highlighting
-        setActiveNodes([Number(currentItem.node_id)]);
-      }
-    }
-  }, [fromShoppingList, shoppingList, currentItemIndex, selectedItem]); // Add selectedItem dependency
-
-  // Effect for handling highlighting of stalls
-  useEffect(() => {
-    if (!shoppingList?.length || currentItemIndex >= shoppingList.length) return;
-
-    const currentItem = shoppingList[currentItemIndex];
-    console.log('Current item for highlighting:', currentItem);
-
-    if (currentItem?.type === 'Product') {
-      const productId = Number(currentItem.id.replace('p', ''));
-      const stallNodes = [];
-      
-      console.log('Looking for product ID:', productId);
-      
-      Object.entries(saveData.stalls).forEach(([stallId, stall]) => {
-        if (stall.products.includes(productId)) {
-          console.log(`Found product ${productId} in stall ${stallId}`);
-          stallNodes.push(...stall.nodes);
-        }
-      });
-      
-      console.log('Setting active nodes for highlighting:', stallNodes);
-      setActiveNodes(stallNodes);
-    } else if (currentItem?.type === 'Stall') {
-      setActiveNodes([Number(currentItem.node_id)]);
-    }
-  }, [currentItemIndex, shoppingList]); // Only depends on current item and list
-
-// Separate effect for path calculation
-  useEffect(() => {
-    // Skip if this is a manual update from handleTryNextStore
-    if (isManualUpdate.current) {
-      isManualUpdate.current = false;
-      return;
-    }
-    
-    const updatePath = async () => {
-      if (!startNodeId) return;
-
-      try {
-        // Shopping list mode
-        if (fromShoppingList && shoppingList?.length && currentItemIndex < shoppingList.length) {
-          const currentItem = shoppingList[currentItemIndex];
-          console.log('=== Path Update Triggered (Shopping List) ===');
-          console.log('Updating path for item:', currentItem);
-          
-          const response = await fetch('http://localhost:5000/findpath', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              start: startNodeId,
-              shopping_list: shoppingList,
-              current_index: currentItemIndex
-            })
-          });
-
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          const data = await response.json();
-          console.log('New path received from backend:', data.path);
-          setPath(data.path);
-        } 
-        // Single item mode (product or stall)
-        else if (selectedItem?.id) {
-          console.log('=== Path Update Triggered (Single Item) ===');
-          console.log('Updating path for item:', selectedItem);
-          
-          const id = selectedItem.id;
-          const isStall = id.startsWith('s');
-          const itemId = Number(id.replace(isStall ? 's' : 'p', ''));
-          
-          const payload = {
-            start: startNodeId,
-            [isStall ? 'stall_id' : 'product_id']: itemId
-          };
-          
-          console.log('Sending request with payload:', payload);
-          
-          const response = await fetch('http://localhost:5000/findpath', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          const data = await response.json();
-          console.log('New path received from backend:', data.path);
-          setPath(data.path);
-        }
-      } catch (error) {
-        console.error('Error updating path:', error);
-      }
-    };
-
-    updatePath();
-  }, [startNodeId, currentItemIndex, shoppingList?.length, selectedItem?.id, fromShoppingList]);
 
   // Simplified highlighting logic
   const getFill = (id) => {
@@ -222,7 +54,7 @@ const MapSVG = ({
 
 // Handler for when a start point is clicked
   const handleStartPointClick = async (nodeId) => {
-    await resetPath(); // Reset pathfinding first
+    await resetPath();
     setStartNodeId(nodeId);
     console.log('Start node set to:', nodeId);
   };
@@ -390,8 +222,8 @@ const MapSVG = ({
     
     const nearestNode = findNearestNode(svgP.x, svgP.y);
     if (nearestNode) {
-      await resetPath(); // Reset pathfinding first
       setStartNodeId(nearestNode);
+      await resetPath();
       setCustomStartNode(nearestNode);
       console.log('Set location to node:', nearestNode);
       // Call the callback to just deactivate the tool
