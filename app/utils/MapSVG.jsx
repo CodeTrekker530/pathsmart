@@ -21,7 +21,8 @@ const MapSVG = ({
   startNodeId,
   setStartNodeId,
   path,
-  setPath
+  setPath,
+  resetPath
 }) => {
   const router = useRouter();
   const [scale, setScale] = useState(1);
@@ -220,8 +221,8 @@ const MapSVG = ({
   };
 
 // Handler for when a start point is clicked
-  const handleStartPointClick = (nodeId) => {
-    isManualUpdate.current = true;  // Set flag before updating
+  const handleStartPointClick = async (nodeId) => {
+    await resetPath(); // Reset pathfinding first
     setStartNodeId(nodeId);
     console.log('Start node set to:', nodeId);
   };
@@ -375,7 +376,7 @@ const MapSVG = ({
   };
 
   // Update handleMapClick
-  const handleMapClick = (e) => {
+  const handleMapClick = async (e) => {
     if (!isLocationToolActive) return;
 
     const svgElement = e.target.ownerSVGElement || e.target;
@@ -389,7 +390,8 @@ const MapSVG = ({
     
     const nearestNode = findNearestNode(svgP.x, svgP.y);
     if (nearestNode) {
-      handleStartPointClick(nearestNode);
+      await resetPath(); // Reset pathfinding first
+      setStartNodeId(nearestNode);
       setCustomStartNode(nearestNode);
       console.log('Set location to node:', nearestNode);
       // Call the callback to just deactivate the tool
