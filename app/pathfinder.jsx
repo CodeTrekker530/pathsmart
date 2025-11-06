@@ -34,8 +34,8 @@ export default function HomeScreen() {
   const [path, setPath] = useState([]);
   const [visitedNodes, setVisitedNodes] = useState(new Set());
   const [previousEndNodes, setPreviousEndNodes] = useState(new Set());
-  // Add this state for excluded end nodes
   const [excludedEndNodes, setExcludedEndNodes] = useState(new Set());
+  const [optimizeEnabled, setOptimizeEnabled] = useState(false);
   console.log('[Map.js] selectedItem:', selectedItem);
   const router = useRouter();
 
@@ -172,18 +172,40 @@ export default function HomeScreen() {
 
     return (
       <View>
-        <TouchableOpacity 
-          onPress={() => setShowProductList(!showProductList)}
-        >
-          <Text style={customStyles.sectionTitle}>
-            Shopping List ({shoppingList.length})
-          </Text>
-          <Ionicons 
-            name={showProductList ? "chevron-up" : "chevron-down"} 
-            size={24} 
-            color="#333" 
-          />
-        </TouchableOpacity>
+        <View style={customStyles.listHeader}>
+          <TouchableOpacity 
+            onPress={() => setShowProductList(!showProductList)}
+          >
+            <Text style={customStyles.sectionTitle}>
+              Shopping List ({shoppingList.length})
+            </Text>
+            <Ionicons 
+              name={showProductList ? "chevron-up" : "chevron-down"} 
+              size={24} 
+              color="#333" 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              customStyles.optimizeButton,
+              optimizeEnabled && customStyles.optimizeButtonActive
+            ]}
+            onPress={() => setOptimizeEnabled(!optimizeEnabled)}
+          >
+            <Ionicons 
+              name="map" 
+              size={20} 
+              color={optimizeEnabled ? "white" : "#0766AD"} 
+            />
+            <Text style={[
+              customStyles.optimizeButtonText,
+              optimizeEnabled && customStyles.optimizeButtonTextActive
+            ]}>
+              Optimize
+            </Text>
+          </TouchableOpacity>
+        </View>
         
         {showProductList && (
           <ScrollView style={customStyles.productList}>
@@ -242,7 +264,8 @@ export default function HomeScreen() {
             shopping_list: shoppingList,
             current_index: currentItemIndex,
             current_stall_id: currentStallId,
-            excluded_end_nodes: Array.from(excludedEndNodes)  // Send excluded end nodes
+            excluded_end_nodes: Array.from(excludedEndNodes),
+            optimize: optimizeEnabled  // Add optimize flag
           }),
         });
         
@@ -257,6 +280,12 @@ export default function HomeScreen() {
         console.log('Received new path:', data.path);
         setPath(data.path);
         setCurrentStallId(data.current_stall);
+        if (data.shopping_list) {
+          setShoppingList(data.shopping_list);
+        }
+        if (data.current_index !== undefined) {
+          setCurrentItemIndex(data.current_index);
+        }
       } catch (error) {
         console.error('Error updating path:', error);
       }
@@ -471,6 +500,31 @@ const customStyles = {
     flexDirection: 'row',
     padding: 20,
     gap: 20,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  optimizeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#0766AD',
+    gap: 6,
+  },
+  optimizeButtonActive: {
+    backgroundColor: '#0766AD',
+  },
+  optimizeButtonText: {
+    fontSize: 14,
+    color: '#0766AD',
+  },
+  optimizeButtonTextActive: {
+    color: 'white',
   },
   mapWrapper: {
     flex: 1,

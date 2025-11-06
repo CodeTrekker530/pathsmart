@@ -122,6 +122,50 @@ class PathFinder:
     
         return best_node
 
+    def find_closest_product(self, start_id, shopping_list):
+        """Find the closest product in the shopping list and return its index
+        Args:
+            start_id: Starting node ID
+            shopping_list: List of products
+        Returns:
+            Index of the closest product in the list, or None if no product is reachable
+        """
+        if not shopping_list or not start_id:
+            return None
+
+        min_cost = float('inf')
+        closest_index = None
+
+        # Check each product in the list
+        for i, item in enumerate(shopping_list):
+            if item['type'] == 'Product':
+                item_id = int(item['id'].replace('p', ''))
+                
+                # Get all stalls that sell this product
+                valid_stalls = {}
+                for stall_id, stall_data in self.save_data['stalls'].items():
+                    if 'products' in stall_data and item_id in stall_data['products']:
+                        valid_stalls[stall_id] = stall_data
+
+                # Get possible end nodes from valid stalls
+                possible_end_nodes = []
+                for stall_data in valid_stalls.values():
+                    possible_end_nodes.extend(stall_data.get('pathNode', []))
+                
+                # Find closest node for this product
+                closest_node = self.find_closest_path_node(start_id, possible_end_nodes)
+                if closest_node:
+                    path = self.find_path(start_id, closest_node)
+                    if path:
+                        cost = 0
+                        for j in range(len(path) - 1):
+                            cost += float(self.get_neighbors(path[j])[str(path[j + 1])])
+                        if cost < min_cost:
+                            min_cost = cost
+                            closest_index = i
+
+        return closest_index
+
     def find_optimal_route(self, start_id, item_list):
         """Find optimal route through all items in shopping list"""
         remaining_items = [item for item in item_list if not item.get('checked', False)]
@@ -265,6 +309,17 @@ def find_path():
         return jsonify({'error': 'Missing start node'}), 400
 
     if shopping_list and len(shopping_list) > 0:
+        optimize = data.get('optimize', False)  # Get optimize flag from request
+        
+        if optimize:
+            # Only perform optimization if the flag is True
+            closest_index = pathfinder.find_closest_product(start_id, shopping_list)
+            
+            if closest_index is not None and closest_index > 0:
+                closest_item = shopping_list.pop(closest_index)
+                shopping_list.insert(0, closest_item)
+                current_index = 0
+
         current_item = shopping_list[current_index]
         
         if current_item['type'] == 'Product':
@@ -314,7 +369,9 @@ def find_path():
 
             return jsonify({
                 'path': path,
-                'current_stall': destination_stall
+                'current_stall': destination_stall,
+                'shopping_list': shopping_list,  # Return the reordered list
+                'current_index': current_index  # Return the updated index
             })
 
     return jsonify({'error': 'Invalid request'}), 400
